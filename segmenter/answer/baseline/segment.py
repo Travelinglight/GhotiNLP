@@ -46,7 +46,7 @@ class Segmenter():
         for i in range(min(len(input), self.maxlen)):
             word = input[0: i + 1]
             if self.pw(word) is not None:
-                heappush(self.heap, [0, math.log(self.pw(word)), word, None])
+                heappush(self.heap, (0, math.log(self.pw(word)), word, None))
 
         # Iteratively fill in chart[i] for all i
         while self.heap:
@@ -56,13 +56,15 @@ class Segmenter():
             if self.chart[endindex] is not None:
                 if entry[1] > self.chart[endindex][1]:
                     self.chart[endindex] = entry
+                else:
+                    continue
             else:
                 self.chart[endindex] = entry
 
             for i in range(min(len(input) - 1 - endindex, self.maxlen)):
                 newword = input[endindex + 1 : endindex + 2 + i]
                 if self.pw(newword) is not None:
-                    newentry = [endindex + 1, entry[1] + math.log(self.pw(newword)), newword, entry]
+                    newentry = (endindex + 1, entry[1] + math.log(self.pw(newword)), newword, entry)
                     if not newentry in self.heap:
                         heappush(self.heap, newentry)
 
