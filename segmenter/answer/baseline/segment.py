@@ -1,4 +1,3 @@
-import pdb
 import sys, codecs, optparse, os
 import math
 from heapq import heappush, heappop
@@ -7,7 +6,6 @@ optparser = optparse.OptionParser()
 optparser.add_option("-c", "--unigramcounts", dest='counts1w', default=os.path.join('data', 'count_1w.txt'), help="unigram counts")
 optparser.add_option("-b", "--bigramcounts", dest='counts2w', default=os.path.join('data', 'count_2w.txt'), help="bigram counts")
 optparser.add_option("-i", "--inputfile", dest="input", default=os.path.join('data', 'input'), help="input file to segment")
-optparser.add_option("-m", "--maxwordlength", dest="maxlen", default=13, help="maximum possible word length")
 (opts, _) = optparser.parse_args()
 
 class Pdist(dict):
@@ -77,7 +75,7 @@ class Segmenter():
         return self.ans
 
 Pw  = Pdist(opts.counts1w)
-seg = Segmenter(Pw, opts.maxlen)
+seg = Segmenter(Pw, Pw.maxlen)
 
 old = sys.stdout
 sys.stdout = codecs.lookup('utf-8')[-1](sys.stdout)
