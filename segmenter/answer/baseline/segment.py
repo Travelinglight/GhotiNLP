@@ -31,9 +31,9 @@ class Pdist(dict):
         else: return None
 
 class Segmenter():
-    def __init__(self, pw, maxlen):
+    def __init__(self, pw):
         self.pw = pw
-        self.maxlen = maxlen
+        self.maxlen = pw.maxlen
 
     def segment(self, input):
         self.chart = [None for i in range(len(input))]
@@ -75,7 +75,7 @@ class Segmenter():
         return self.ans
 
 Pw  = Pdist(opts.counts1w)
-seg = Segmenter(Pw, Pw.maxlen)
+seg = Segmenter(Pw)
 
 old = sys.stdout
 sys.stdout = codecs.lookup('utf-8')[-1](sys.stdout)

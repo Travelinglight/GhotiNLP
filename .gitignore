@@ -92,3 +92,6 @@ ENV/
 *~
 .*.swp
 *.bak
+
+# PyCharm
+.idea/*
