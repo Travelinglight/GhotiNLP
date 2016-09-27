@@ -15,13 +15,15 @@ class PdistUnigram(dict):
     "A probability distribution estimated from counts in unigram."
 
     def __init__(self, filename, sep='\t', N=None, missingfn=None):
-        self.maxlen = 0 
+        self.count = {}
+        self.maxlen = 0
         for line in file(filename):
             (key, freq) = line.split(sep)
             try:
                 utf8key = unicode(key, 'utf-8')
             except:
                 raise ValueError("Unexpected error %s" % (sys.exc_info()[0]))
+            self.count[int(freq)] = self.count.get(int(freq), 0) + 1
             self[utf8key] = self.get(utf8key, 0) + int(freq)
             self.maxlen = max(len(utf8key), self.maxlen)
         self.N = float(N or sum(self.itervalues()))
@@ -32,15 +34,26 @@ class PdistUnigram(dict):
         if unicodedata.normalize('NFKC', tempKey).isdigit():
             return len(unicodedata.normalize('NFKC', tempKey))/float(self.N)
 
-        if key in self: return float(self[key])/float(self.N)
-        elif len(key) == 1: return self.missingfn(key, self.N)
-        else: return None
+        if key in self:
+            if int(self[key]) > 3:
+                closest_key_nr = min(PwUnigram.count, key=lambda y:abs(float(y-int(self[key]))))
+                closest_key_nrp = min(PwUnigram.count, key=lambda y:abs(float(y-int(self[key]-1))))
+                Nr = PwUnigram.count[closest_key_nr]
+                Nrpuls = PwUnigram.count[closest_key_nrp]
+                probability = float((int(self[key]) + 1) * Nrpuls) / float(self.N * Nr)
+                return probability
+            else:
+                return float(self[key])/float(self.N)
+        elif len(key) == 1:
+            return self.missingfn(key, self.N)
+        else:
+            return None
 
 class PdistBigram(dict):
     "A probability distribution estimated from counts in bigram and unigram."
 
     def __init__(self, filename, PwUnigram, sep='\t', N=None, missingfn=None):
-        self.maxlen = 0 
+        self.maxlen = 0
         self.PwUniBigram = PwUnigram
         for line in file(filename):
             (key, freq) = line.split(sep)
@@ -57,7 +70,8 @@ class PdistBigram(dict):
 
     def __call__(self, key):
         if key in self: return float(self[key])/(float(self.N) * float(PwUnigram(key[0])))
-        else: return PwUnigram(key[1])        
+        elif len(key) == 1: return self.missingfn(key, self.N)
+        else: return PwUnigram(key[1])
 
 class segmenter:
     "Perform segmentation to the input"
@@ -99,7 +113,7 @@ class segmenter:
 
             for i in range(endindex+1, min(endindex+1+self.maxlen,len(input))):
                 if not PwUnigram(input[endindex+1:i+1]) is None:
-                    biprobability = PwBigram((entry[1], input[endindex+1:i+1])) 
+                    biprobability = PwBigram((entry[1], input[endindex+1:i+1]))
                     uniprobability = PwUnigram(input[endindex+1:i+1])
                     probability = math.log(k * biprobability + (1-k) * uniprobability, 2)
                     newentry = [endindex+1, input[endindex+1:i+1], entry[2] + probability, entry]
@@ -108,13 +122,13 @@ class segmenter:
         ## Get the best segmentation ##
         finalentry = chart[finalindex]
         currentry = finalentry
-        while(not(currentry is None)): 
+        while(not(currentry is None)):
             res.append(currentry[1])
             currentry = currentry[3]
         res = reversed(res)
         finalRes =  " ".join(res)
 
-        return finalRes 
+        return finalRes
 
 PwUnigram  = PdistUnigram(opts.counts1w)
 PwBigram = PdistBigram(opts.counts2w, PwUnigram)
