@@ -110,6 +110,7 @@ class Segmenter():
         # Get the best segmentation
 
         maxprob = self.chart[len(input) - 1][0][0]
+        entry = None
         for i in self.chart[len(input) - 1]:
             if (i[0] > maxprob):
                 maxprob = i[0]
