@@ -26,33 +26,43 @@ class Pdist(dict):
 
     def __call__(self, key):
         if key in self: return float(self[key])/float(self.N)
-        #else: return self.missingfn(key, self.N)
         elif len(key) == 1: return self.missingfn(key, self.N)
         else: return None
 
 class Segmenter():
-    def __init__(self, pw):
+    def __init__(self, pw, maxlen=None):
         self.pw = pw
-        self.maxlen = pw.maxlen
+        if maxlen is not None:
+            self.maxlen = maxlen
+        else:
+            self.maxlen = pw.maxlen
 
     def segment(self, input):
         self.chart = [None for i in range(len(input))]
+        self.scores = {}
         self.heap = []
         self.ans = []
+
+        # entry: (start_index, word)
+        # (Note: start/end_index are of the CURRENT word.)
+        # end_index = start_index + len(word) - 1
+        # scores[entry] = score of the entry
+        # chart[end_index] = entry
 
         # Initialize the heap
         for i in range(min(len(input), self.maxlen)):
             word = input[0: i + 1]
             if self.pw(word) is not None:
-                heappush(self.heap, (0, math.log(self.pw(word)), word, None))
+                heappush(self.heap, (0, word))
+                self.scores[(0, word)] = math.log(self.pw(word))
 
         # Iteratively fill in chart[i] for all i
         while self.heap:
             entry = heappop(self.heap)
-            endindex =  entry[0] + len(entry[2]) - 1
+            endindex = entry[0] + len(entry[1]) - 1
 
             if self.chart[endindex] is not None:
-                if entry[1] > self.chart[endindex][1]:
+                if self.scores[entry] > self.scores[self.chart[endindex]]:
                     self.chart[endindex] = entry
                 else:
                     continue
@@ -60,17 +70,24 @@ class Segmenter():
                 self.chart[endindex] = entry
 
             for i in range(min(len(input) - 1 - endindex, self.maxlen)):
-                newword = input[endindex + 1 : endindex + 2 + i]
+                newword = input[endindex + 1: endindex + 2 + i]
                 if self.pw(newword) is not None:
-                    newentry = (endindex + 1, entry[1] + math.log(self.pw(newword)), newword, entry)
-                    if not newentry in self.heap:
+                    newentry = (endindex + 1, newword)
+                    newscore = self.scores[entry] + math.log(self.pw(newword))
+                    if newentry not in self.heap:
                         heappush(self.heap, newentry)
+                        self.scores[newentry] = newscore
+                    else:
+                        self.scores[newentry] = max(self.scores[newentry], newscore)
 
         # Get the best segmentation
         entry = self.chart[len(input) - 1]
-        while entry is not None:
-            self.ans = [entry[2]] + self.ans
-            entry = entry[3]
+        while True:
+            self.ans = [entry[1]] + self.ans
+            if entry[0] == 0:
+                break
+            else:
+                entry = self.chart[entry[0] - 1]
 
         return self.ans
 
