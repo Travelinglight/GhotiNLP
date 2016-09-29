@@ -1,7 +1,7 @@
 # -*- coding: UTF-8 -*-
 from __future__ import print_function
-import sys, codecs, optparse, os, heapq, math, unicodedata
-import time
+from heapq import heappush, heappop
+import sys, codecs, optparse, os, math, unicodedata
 
 ## k = 0 unigram, k = 1 bigram, the version combine unigram and bigram
 k = float(0.4)
@@ -12,13 +12,14 @@ optparser = optparse.OptionParser()
 optparser.add_option("-c", "--unigramcounts", dest='counts1w', default=os.path.join('data', 'count_1w.txt'), help="unigram counts")
 optparser.add_option("-b", "--bigramcounts", dest='counts2w', default=os.path.join('data', 'count_2w.txt'), help="bigram counts")
 optparser.add_option("-i", "--inputfile", dest="input", default=os.path.join('data', 'input'), help="input file to segment")
+optparser.add_option("-u", "--unibigram", dest="unibigram", default=0.4, help="u == 0: pure unigram")
 (opts, _) = optparser.parse_args()
 
 class PdistUnigram(dict):
     "A probability distribution estimated from counts in unigram."
 
     def __init__(self, filename, sep='\t', N=None, missingfn=None):
-        self.maxlen = 0 
+        self.maxlen = 0
         for line in file(filename):
             (key, freq) = line.split(sep)
             try:
@@ -41,9 +42,9 @@ class PdistUnigram(dict):
 
 class PdistBigram(dict):
     "A probability distribution estimated from counts in bigram and unigram."
-    def __init__(self, filename, PwUnigram, sep='\t', N=None, missingfn=None):
-        self.maxlen = 0
-        self.PwUniBigram = PwUnigram
+    def __init__(self, filename, pwUnigram, sep='\t', N=None, missingfn=None):
+        self.maxlen = 0 
+        self.pwUnigram = pwUnigram
         for line in file(filename):
             (key, freq) = line.split(sep)
             (key1, key2) = key.split()
@@ -62,86 +63,88 @@ class PdistBigram(dict):
         self.missingfn = missingfn or (lambda k, N: 1./N)
 
     def __call__(self, key):
-        if key in self: return float(self[key]-backoff)/(float(self.N) * float(PwUnigram(key[0])))
-        elif key[0] in nxy: return backoff*nxy[key[0]]*PwUnigram(key[1])        
-        else: return PwUnigram(key[1]) 
-class segmenter:
+        if key in self: return float(self[key]-backoff)/(float(self.N) * float(self.pwUnigram(key[0])))
+        elif key[0] in nxy: return backoff*nxy[key[0]] * self.pwUnigram(key[1])
+        else: return self.pwUnigram(key[1])
+
+class Segmenter:
     "Perform segmentation to the input"
 
-    def __init__(self, PwUnigram, PwBigram, maxlen):
-        self.PwUnigram = PwUnigram
-        self.PwBigram = PwBigram
+    def __init__(self, pwUnigram, pwBigram, maxlen, unibigram):
+        self.pwUnigram = pwUnigram
+        self.pwBigram = pwBigram
         self.maxlen = maxlen
+        self.ub = unibigram
 
     def __call__(self, input):
-        chart = []
-        finalindex = len(input) - 1
-        h = []
-        dictionary = {}
-        res = []
-        pushCnt = 0
+        self.scores = {}
+        self.prev = {}
+        self.heap = []
+        self.ans = []
 
-        ## Initialize the heap ##
-        for i in range(0, min(self.maxlen,len(input))):
-            if not PwUnigram(input[0:i+1]) is None:
-                entry = (0, input[0:i+1])
-                dictionary[entry] = (math.log(PwUnigram(input[0:i+1]), 2), None)
-                if not entry in h:
-                    heapq.heappush(h, entry)
+        # entry: (start_index, word)
+        # (Note: start/end_index are of the CURRENT word.)
+        # end_index = start_index + len(word) - 1
+        # scores[entry] = score of the entry
+        # prev[entry] = previous_entry
 
-        ## Iteratively fill in chart[i] for all i ##
-        for i in range(len(input)):
-            chart.append(None)
+        # Initialize the heap
+        for i in range(min(len(input), self.maxlen)):
+            word = input[0: i + 1]
+            if self.pwUnigram(word) is not None:
+                entry = (0, word)
+                heappush(self.heap, entry)
+                self.scores[entry] = math.log(self.pwUnigram(word))
+                self.prev[entry] = None
 
-        while(len(h) > 0):
-            entry = heapq.heappop(h)
+        # Store the last entry which has the largest score so that we can backtrack.
+        lastEntry = None
+        # Dynamic Programming
+        while self.heap:
+            entry = heappop(self.heap)
             endindex = entry[0] + len(entry[1]) - 1
 
-            if(chart[endindex] is None):
-                chart[endindex] = entry
-            else:
-                preventry = chart[endindex]
-                if dictionary[entry][0] > dictionary[preventry][0]:
-                    chart[endindex] = entry
-                else:
-                    continue
+            if endindex == len(input) - 1 and \
+                    (lastEntry is None or self.scores[entry] > self.scores[lastEntry]):
+                lastEntry = entry
 
-            for i in range(endindex + 1, min(endindex + 1 + self.maxlen, len(input))):
-                if PwUnigram(input[endindex + 1: i + 1]) is not None:
-                    biprobability = PwBigram((entry[1], input[endindex + 1: i + 1]))
-                    uniprobability = PwUnigram(input[endindex + 1: i + 1])
-                    probability = math.log(k * biprobability + (1-k) * uniprobability, 2)
-                    newentry = (endindex+1, input[endindex+1:i+1])
-                    if newentry not in dictionary:
-                        heapq.heappush(h, newentry)
-                        dictionary[newentry] = (dictionary[entry][0] + probability, entry)
+            for i in range(min(len(input) - 1 - endindex, self.maxlen)):
+                newword = input[endindex + 1: endindex + 2 + i]
+                if self.pwUnigram(newword) is not None:
+                    biprobability = self.pwBigram((entry[1], newword))
+                    uniprobability = self.pwUnigram(newword)
+                    probability = self.ub * biprobability + (1 - self.ub) * uniprobability
+
+                    newentry = (endindex + 1, newword)
+                    newscore = self.scores[entry] + math.log(probability, 2)
+                    if newentry not in self.heap:
+                        heappush(self.heap, newentry)
+                        self.scores[newentry] = newscore
+                        self.prev[newentry] = entry
                     else:
-                        if dictionary[newentry][0] < dictionary[entry][0] + probability:
-                            dictionary[newentry] = (dictionary[entry][0] + probability, entry)
+                        if newscore > self.scores[newentry]:
+                            self.scores[newentry] = newscore
+                            self.prev[newentry] = entry
 
-        ## Get the best segmentation ##
-        finalentry = chart[finalindex]
-        currentry = finalentry
-        while(not(currentry is None)): 
-            res.append(currentry[1])
-            currentry = dictionary[currentry][1]
+        # Get the best segmentation
+        entry = lastEntry
+        while entry is not None:
+            self.ans = [entry[1]] + self.ans
+            entry = self.prev[entry]
 
-        res = reversed(res)
-        finalRes =  " ".join(res)
+        return self.ans
 
-        return finalRes 
 
-PwUnigram  = PdistUnigram(opts.counts1w)
-PwBigram = PdistBigram(opts.counts2w, PwUnigram)
-Segmenter = segmenter(PwUnigram, PwBigram, PwUnigram.maxlen)
+
+pwUnigram  = PdistUnigram(opts.counts1w)
+pwBigram = PdistBigram(opts.counts2w, pwUnigram)
+segmenter = Segmenter(pwUnigram, pwBigram, pwUnigram.maxlen, float(opts.unibigram))
 old = sys.stdout
 sys.stdout = codecs.lookup('utf-8')[-1](sys.stdout)
 
 # perform segmentation and print result
-before_time = time.clock();
 with open(opts.input) as f:
     for line in f:
         utf8line = unicode(line.strip(), 'utf-8')
-        print(Segmenter(utf8line))
+        print(" ".join(segmenter(utf8line)))
 sys.stdout = old
-#print(time.clock() - before_time)
