@@ -1,0 +1,54 @@
+## My contribution to the homework solution
+1. Implemented baseline segmenter, which is later improved by Hexcles Ma.
+2. Implemented bigram segmenter (not used)
+3. Added Jelinek-Mercer Smoothing to the bigram segmenter (not used)
+4. Added additive smoothing to bigram segmenter
+5. Added top-k pruning to the bigram segmenter (not used)
+6. Partly corrected DP in back-off smoothing segmenter (not used)
+7. Participated in discussing DP correction
+8. Applied Hexcles Ma's DP correction to mack-off smoothing segmenter (not used)
+9. Applied Hexcles Ma's DP correction to additive smoothing, but accuracy is lower than expectation
+10. Applied Hexcles Ma's DP correction to Chauncey's good turing smoothing segmenter, but accuracy is lower than expectation.
+
+## My formal commit to group repository
+commit bbab7f766aec62d28c1fbd4407dd8a65439e44e0
+Author: Jingda Chen <holaelmundokingston@gmail.com>
+Date:   Sat Sep 17 02:25:57 2016 -0700
+
+    H1 baseline sort of implemented
+
+commit db11a015ce38e659e23bdfb5c7267eddd7b998e3
+Author: Jingda Chen <holaelmundokingston@gmail.com>
+Date:   Fri Sep 23 15:16:44 2016 -0700
+
+    bigram kingston's version
+
+commit 07640d4b0246533b04a05c3da853f860e83e9a5b
+Author: Jingda Chen <holaelmundokingston@gmail.com>
+Date:   Mon Sep 26 19:00:05 2016 -0700
+
+    kingston's bigrams
+    
+commit dc5aafea0ccd83e9d2267b3e9410d985a002798c
+Author: Jingda Chen <holaelmundokingston@gmail.com>
+Date:   Wed Sep 28 16:45:54 2016 -0700
+
+    pruning added to backoff
+
+commit e4f6d5d101ad2fc1b79fefafa9f94cd8bb275e19
+Author: Jingda Chen <holaelmundokingston@gmail.com>
+Date:   Wed Sep 28 23:18:16 2016 -0700
+
+    backoffsmoothing corrected and pruned, current accuracy 93.37.py
+
+commit c5d40ab073ae9f54db0dfaa3b195668932f79ffc
+Author: Jingda Chen <holaelmundokingston@gmail.com>
+Date:   Thu Sep 29 12:18:51 2016 -0700
+
+    additive smoothing dp improved
+
+commit 991ff2626b6f227a0ba6c9e74849f129f0f16281
+Author: Jingda Chen <holaelmundokingston@gmail.com>
+Date:   Thu Sep 29 13:01:38 2016 -0700
+
+    good turing DP updated
