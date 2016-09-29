@@ -23,12 +23,13 @@ class Pdist(dict):
             self[utf8key] = self.get(utf8key, 0) + int(freq)
             self.maxlen = max(len(utf8key), self.maxlen)
         self.N = float(N or sum(self.itervalues()))
-        self.missingfn = missingfn or (lambda k, N: 1./N)
+        self.missingfn = missingfn or (lambda k, Pw: 1. / Pw.N)
 
     def __call__(self, key):
-        if key in self: return float(self[key])/float(self.N)
-        elif len(key) == 1: return self.missingfn(key, self.N)
-        else: return None
+        if key in self:
+            return float(self[key])/float(self.N)
+        else:
+            return self.missingfn(key, self)
 
 
 class Segmenter():
@@ -93,7 +94,22 @@ class Segmenter():
 
         return self.ans
 
-Pw = Pdist(opts.counts1w)
+
+# 80.44 local; 88.55 leaderboard
+def naive_limit_to_one(key, Pw):
+    if len(key) == 1:
+        return 1. / Pw.N
+    else:
+        return None
+
+
+# 86.08 local; 91.47 leaderboard
+def naive_punish_long_words(key, Pw):
+    # 1 is also the minimal count in unigram
+    return (1. / Pw.N) ** len(key)
+
+
+Pw = Pdist(opts.counts1w, missingfn=naive_punish_long_words)
 seg = Segmenter(Pw)
 
 old = sys.stdout
