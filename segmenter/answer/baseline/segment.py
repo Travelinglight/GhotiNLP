@@ -8,11 +8,12 @@ optparser.add_option("-b", "--bigramcounts", dest='counts2w', default=os.path.jo
 optparser.add_option("-i", "--inputfile", dest="input", default=os.path.join('data', 'input'), help="input file to segment")
 (opts, _) = optparser.parse_args()
 
+
 class Pdist(dict):
     "A probability distribution estimated from counts in datafile."
 
     def __init__(self, filename, sep='\t', N=None, missingfn=None):
-        self.maxlen = 0 
+        self.maxlen = 0
         for line in file(filename):
             (key, freq) = line.split(sep)
             try:
@@ -29,6 +30,7 @@ class Pdist(dict):
         elif len(key) == 1: return self.missingfn(key, self.N)
         else: return None
 
+
 class Segmenter():
     def __init__(self, pw, maxlen=None):
         self.pw = pw
@@ -38,8 +40,8 @@ class Segmenter():
             self.maxlen = pw.maxlen
 
     def segment(self, input):
-        self.chart = [None for i in range(len(input))]
         self.scores = {}
+        self.prev = {}
         self.heap = []
         self.ans = []
 
@@ -47,27 +49,27 @@ class Segmenter():
         # (Note: start/end_index are of the CURRENT word.)
         # end_index = start_index + len(word) - 1
         # scores[entry] = score of the entry
-        # chart[end_index] = entry
+        # prev[entry] = previous_entry
 
         # Initialize the heap
         for i in range(min(len(input), self.maxlen)):
             word = input[0: i + 1]
             if self.pw(word) is not None:
-                heappush(self.heap, (0, word))
-                self.scores[(0, word)] = math.log(self.pw(word))
+                entry = (0, word)
+                heappush(self.heap, entry)
+                self.scores[entry] = math.log(self.pw(word))
+                self.prev[entry] = None
 
-        # Iteratively fill in chart[i] for all i
+        # Store the last entry which has the largest score so that we can backtrack.
+        lastEntry = None
+        # Dynamic Programming
         while self.heap:
             entry = heappop(self.heap)
             endindex = entry[0] + len(entry[1]) - 1
 
-            if self.chart[endindex] is not None:
-                if self.scores[entry] > self.scores[self.chart[endindex]]:
-                    self.chart[endindex] = entry
-                else:
-                    continue
-            else:
-                self.chart[endindex] = entry
+            if endindex == len(input) - 1 and \
+                    (lastEntry is None or self.scores[entry] > self.scores[lastEntry]):
+                lastEntry = entry
 
             for i in range(min(len(input) - 1 - endindex, self.maxlen)):
                 newword = input[endindex + 1: endindex + 2 + i]
@@ -77,21 +79,21 @@ class Segmenter():
                     if newentry not in self.heap:
                         heappush(self.heap, newentry)
                         self.scores[newentry] = newscore
+                        self.prev[newentry] = entry
                     else:
-                        self.scores[newentry] = max(self.scores[newentry], newscore)
+                        if newscore > self.scores[newentry]:
+                            self.scores[newentry] = newscore
+                            self.prev[newentry] = entry
 
         # Get the best segmentation
-        entry = self.chart[len(input) - 1]
-        while True:
+        entry = lastEntry
+        while entry is not None:
             self.ans = [entry[1]] + self.ans
-            if entry[0] == 0:
-                break
-            else:
-                entry = self.chart[entry[0] - 1]
+            entry = self.prev[entry]
 
         return self.ans
 
-Pw  = Pdist(opts.counts1w)
+Pw = Pdist(opts.counts1w)
 seg = Segmenter(Pw)
 
 old = sys.stdout
