@@ -1,0 +1,25 @@
+## My contribution to the homework solution
+1. Writing my version of the baseline solution.
+2. Implementing the version using bigram to score the segmentation with Jelinek-Mercer Smoothing.
+3. Trying Good-Turing Smoothing on the unigram and bigram to smooth the probability models.
+4. Assigning a certain probability to the missing words whose length are longer than one, which is different with the way in the pseudo-code provided. 
+5. To improve the answer a little bit, using some knowledge about numbers, and other character classes to do some heuristic merges after the segmenter produces the output segmentation
+
+## My formal commit to group repository
+commit d2bbce90aaeb238734b8f0a4e2c2a9eaa23ea507
+Author: ChaunceyKiwi <chaunceykiwi@gmail.com>
+Date:   Thu Sep 22 09:50:05 2016 -0700
+
+    add version using bigram and unigram
+
+commit cde300e3f2ca142ed135f15fa70e1c76d2eb9da4
+Author: ChaunceyKiwi <chaunceykiwi@gmail.com>
+Date:   Mon Sep 26 18:39:17 2016 -0700
+
+    Good Turing smoothing added
+
+commit 8c63671bc497bc2299235473cc47dbe29fcd9527
+Author: ChaunceyKiwi <chaunceykiwi@gmail.com>
+Date:   Tue Sep 27 17:30:41 2016 -0700
+
+    add heuristicImprove class
