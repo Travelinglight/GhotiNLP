@@ -1,0 +1,142 @@
+Hongpu Ma, hongpum@sfu.ca
+
+## My contribution to the homework solution
+
+1. Fixed important bugs in the original implementation of the baseline and achieved
+   expected F1 score.
+2. Researched various methods to exploit bigram counts.
+3. Modified the DP routine to make it work with 2D states.
+4. Greatly improved the code efficiency and thus enabled longer unknown words.
+5. Code refactor and clean up for the final version.
+6. Wrote the overall README.
+
+## My git commits to the group repository
+
+commit fa9cdddf0581253a09b2e50e3404f216d32ed45a
+Author: Hexcles Ma <bob1211@gmail.com>
+Date:   Thu Sep 29 18:29:59 2016 -0700
+
+    Update README to add in acknowledgement
+
+commit 3882e1dc983fcbbe886ffd66c2063745c151bd65
+Author: Hexcles Ma <bob1211@gmail.com>
+Date:   Thu Sep 29 18:25:50 2016 -0700
+
+    Add final version
+
+commit d51e29a7278410e83cf20739aa3474e3e653b7b7
+Author: Hexcles Ma <bob1211@gmail.com>
+Date:   Thu Sep 29 18:25:14 2016 -0700
+
+    Move individual READMEs
+
+commit a2cac0ecace85d98d39cdb825a515c50a12f1336
+Author: Hexcles Ma <bob1211@gmail.com>
+Date:   Thu Sep 29 18:24:31 2016 -0700
+
+    Add README
+
+commit e202418758c597966f3015074612b0369dab8c40
+Author: Hexcles Ma <bob1211@gmail.com>
+Date:   Thu Sep 29 02:22:22 2016 -0700
+
+    This version is based on JM smoothing, bigram, with some heuristics.
+    
+    Local 89.94; Leaderboard 93.55
+
+commit 767134d051b013842cf215e33ce3db135fb0abfd
+Author: Hexcles Ma <bob1211@gmail.com>
+Date:   Thu Sep 29 01:46:28 2016 -0700
+
+    New bigram impl using improved DP
+
+commit 26c64f39d150f6c30796da22311ae84f8dfeff0f
+Author: Hexcles Ma <bob1211@gmail.com>
+Date:   Wed Sep 28 23:56:20 2016 -0700
+
+    Remove duplicate files
+
+commit f2ff56c80c57f8714e98d2883620e248d1372a67
+Merge: ced29e6 e4f6d5d
+Author: Hexcles Ma <bob1211@gmail.com>
+Date:   Wed Sep 28 23:49:03 2016 -0700
+
+    Merge branch 'master' of github.com:Travelinglight/GhotiNLP
+
+commit ced29e685b096ca3245e3c22fcd3117ddfdc144e
+Author: Hexcles Ma <bob1211@gmail.com>
+Date:   Wed Sep 28 23:48:45 2016 -0700
+
+    Add several different missingfn into baseline
+
+commit fc64a510df9108211ec1710012e61a394a1b9eea
+Author: Hexcles Ma <bob1211@gmail.com>
+Date:   Wed Sep 28 17:30:49 2016 -0700
+
+    Get rid of the chart in baseline and use prev table instead.
+
+commit bea7d40f78f7b48b1d0298b207027d7b85a05537
+Merge: c1b2cee 7e3f3b1
+Author: Hexcles Ma <bob1211@gmail.com>
+Date:   Wed Sep 28 16:51:55 2016 -0700
+
+    Merge branch 'master' of github.com:Travelinglight/GhotiNLP
+
+commit c1b2cee8145dd806887947a3c46730173c47bdab
+Author: Hexcles Ma <bob1211@gmail.com>
+Date:   Wed Sep 28 16:51:02 2016 -0700
+
+    Improve the speed of the baseline algorithm
+    
+    Prevent pushing duplicate entries into the heap and store the scores and
+    the words outside the heap.
+
+commit 817ee321490cae89e9aa06b6a3f22fd7e4af6bc0
+Author: Hexcles Ma <bob1211@gmail.com>
+Date:   Wed Sep 28 16:50:29 2016 -0700
+
+    Rename the brute-force baseline impl
+
+commit 59e71157ef72dcd2997fbf3f6f7c8596d845b419
+Author: Hexcles Ma <bob1211@gmail.com>
+Date:   Wed Sep 28 13:54:13 2016 -0700
+
+    Update score-segments.py according to the template
+
+commit 6b9c3baf954751ee34fa722ea769cb3e9268e33a
+Author: Hexcles Ma <bob1211@gmail.com>
+Date:   Mon Sep 19 00:00:08 2016 -0700
+
+    Use maxlen from Pdist instead of command line arg
+
+commit 34704b22702d9354882295de1d7c4cac31f6bd01
+Author: Hexcles Ma <bob1211@gmail.com>
+Date:   Sun Sep 18 01:07:32 2016 -0700
+
+    Update README.md accordingly
+
+commit 62d1bba7c4a5a140bc0a574681ffbda2ea2992ab
+Author: Hexcles Ma <bob1211@gmail.com>
+Date:   Sun Sep 18 01:01:35 2016 -0700
+
+    Fix a bug of infinite loop in segment.py
+    
+    Also use tuple for heap items instead of list
+
+commit 0872068ccb6c654c5096d434336c60888133898c
+Author: Hexcles Ma <bob1211@gmail.com>
+Date:   Sun Sep 18 00:51:32 2016 -0700
+
+    Add baseline implementations back
+
+commit d67ebb775310645e7862c9f76389cf52c260f6cd
+Author: Hexcles Ma <bob1211@gmail.com>
+Date:   Sun Sep 18 00:47:46 2016 -0700
+
+    Squash merge branch 'template' (5439cb6@anoopsarkar/nlp-class-hw)
+
+commit 1cbf480b00c5aacb0c15c8afd5afb0cc99d849d3
+Author: Hexcles Ma <bob1211@gmail.com>
+Date:   Sun Sep 18 00:07:27 2016 -0700
+
+    Purge repo preparing for mirror-push
