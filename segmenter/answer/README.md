@@ -115,3 +115,8 @@ Our team members also played around with many different methods, including those
 in the class such as Good-Turing smoothing, additive smoothing, and Katz back-off. All of
 them either performed very badly on this particular task and data set, or gave ignorable
 improvement. See the individual reports and the subdirectories for details.
+
+## Acknowledgement
+
+* Anoop Sarkar, the course web page
+* Peter Norvig, Chapter 14 (_Natural Language Corpus Data_) of _Beautiful Data_
