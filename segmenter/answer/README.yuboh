@@ -1,0 +1,19 @@
+## My contribution to the homework solution
+1. Write the first edition of the code that brings in Bigram and use the conditional probability.
+2. Tried different smoothing together with bigram model.
+3. Officially contribute to Katz backoff smoothing, however the performance is not so good.
+4. Help with improving the missing function in the unigram, tried a missing function 1/N*(lamd**(length-1)) and score 94.12 on leaderboard, but we decided not to use it at last. 
+
+
+## My formal commit to group repository
+commit f7cbade52dfcb305cddacb75407e2959acbdccad
+Author: Yubo Hu <Yubo Hu>
+Date:   Tue Sep 27 00:38:22 2016 -0700
+
+    backoff smoothing
+
+commit 0d7214f5e45c0761dfefac2b239dd3eb087d8f49
+Author: Yubo Hu <yuboh@sfu.ca>
+Date:   Tue Sep 20 15:52:38 2016 -0700
+
+    Use conditional probability from bigram
