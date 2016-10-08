@@ -53,7 +53,11 @@ def get_global_vector(labels, feat_list):
         if feat_value[:4] == 'U00:':
             index += 1
 
-        global_vector[(feat_value, labels[index])] = 1
+        if (feat_value, labels[index]) in global_vector:
+            global_vector[(feat_value, labels[index])] += 1
+        else:
+            global_vector[(feat_value, labels[index])] = 1
+
 
     return global_vector
 
