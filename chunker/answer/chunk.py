@@ -42,7 +42,7 @@ def get_global_vector(labels, feat_list):
     """
     :param labels: a list of chuncking label, e.g. ['B-NP', ...]
     :param feat_list: a list of features on words and POS tags, e.g. ['U12:VBDq', ...]
-    :return: a dict of features with chuncking labels, e.g. {('U12:VBDq')}
+    :return: a dict of features with chuncking labels, e.g. {('U12:VBDq'): 1, ...}
     """
     global_vector = {}
 
@@ -73,6 +73,9 @@ def add_vector(a, b, k):
 
 
 def get_labels(labeled_list):
+    """
+    get chuncking labels from a labeled list
+    """
     labels = []
     for i in range(len(labeled_list)):
         labeled_list_value = labeled_list[i]
@@ -82,6 +85,10 @@ def get_labels(labeled_list):
 
 
 def perc_train(train_data, tagset, numepochs):
+    """
+    :current_global_vector: a dict of features for the predicted labels
+    :gold_global_vector: a dict of features for the standard
+    """
     feat_vec = defaultdict(int)
     #for t in range(numepochs):
     default_tag = tagset[0]
