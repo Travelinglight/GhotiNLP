@@ -101,6 +101,8 @@ def perc_train(train_data, tagset, numepochs):
             feat_vec = add_vector(feat_vec, gold_global_vector, 1)
             feat_vec = add_vector(feat_vec, current_global_vector, -1)
 
+        # perc.perc_write_to_file(feat_vec, opts.modelfile + str(t))
+
     return feat_vec
 
 
