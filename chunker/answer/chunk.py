@@ -47,11 +47,17 @@ def get_global_vector(labels, feat_list):
     global_vector = {}
 
     index = -1
+    prev_tag = 'B_-1'
     for i in range(len(feat_list)):
         feat_value = feat_list[i]
         # check if we reached the feats for the next word
         if feat_value[:4] == 'U00:':
             index += 1
+            if (index > 0):
+                prev_tag = labels[index - 1]
+
+        if feat_value[0] == 'B':
+            feat_value = 'B:' + prev_tag
 
         if (feat_value, labels[index]) in global_vector:
             global_vector[(feat_value, labels[index])] += 1
@@ -101,7 +107,7 @@ def perc_train(train_data, tagset, numepochs):
             feat_vec = add_vector(feat_vec, gold_global_vector, 1)
             feat_vec = add_vector(feat_vec, current_global_vector, -1)
 
-        # perc.perc_write_to_file(feat_vec, opts.modelfile + str(t))
+        perc.perc_write_to_file(feat_vec, opts.modelfile + str(t))
 
     return feat_vec
 
@@ -111,7 +117,7 @@ if __name__ == '__main__':
     optparser.add_option("-t", "--tagsetfile", dest="tagsetfile", default=os.path.join("data", "tagset.txt"), help="tagset that contains all the labels produced in the output, i.e. the y in \phi(x,y)")
     optparser.add_option("-i", "--trainfile", dest="trainfile", default=os.path.join("data", "train.txt.gz"), help="input data, i.e. the x in \phi(x,y)")
     optparser.add_option("-f", "--featfile", dest="featfile", default=os.path.join("data", "train.feats.gz"), help="precomputed features for the input data, i.e. the values of \phi(x,_) without y")
-    optparser.add_option("-e", "--numepochs", dest="numepochs", default=int(10), help="number of epochs of training; in each epoch we iterate over over all the training examples")
+    optparser.add_option("-e", "--numepochs", dest="numepochs", default=int(4), help="number of epochs of training; in each epoch we iterate over over all the training examples")
     optparser.add_option("-m", "--modelfile", dest="modelfile", default=os.path.join("data", "default.model"), help="weights for all features stored on disk")
     (opts, _) = optparser.parse_args()
 
