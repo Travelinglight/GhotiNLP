@@ -1,41 +1,11 @@
-"""
-
-You have to write the perc_train function that trains the feature weights using the perceptron algorithm for the CoNLL 2000 chunking task.
-
-Each element of train_data is a (labeled_list, feat_list) pair. 
-
-Inside the perceptron training loop:
-
-    - Call perc_test to get the tagging based on the current feat_vec and compare it with the true output from the labeled_list
-
-    - If the output is incorrect then we have to update feat_vec (the weight vector)
-
-    - In the notation used in the paper we have w = w_0, w_1, ..., w_n corresponding to \phi_0(x,y), \phi_1(x,y), ..., \phi_n(x,y)
-
-    - Instead of indexing each feature with an integer we index each feature using a string we called feature_id
-
-    - The feature_id is constructed using the elements of feat_list (which correspond to x above) combined with the output tag (which correspond to y above)
-
-    - The function perc_test shows how the feature_id is constructed for each word in the input, including the bigram feature "B:" which is a special case
-
-    - feat_vec[feature_id] is the weight associated with feature_id
-
-    - This dictionary lookup lets us implement a sparse vector dot product where any feature_id not used in a particular example does not participate in the dot product
-
-    - To save space and time make sure you do not store zero values in the feat_vec dictionary which can happen if \phi(x_i,y_i) - \phi(x_i,y_{perc_test}) results in a zero value
-
-    - If you are going word by word to check if the predicted tag is equal to the true tag, there is a corner case where the bigram 'T_{i-1} T_i' is incorrect even though T_i is correct.
-
-"""
-
 import perc
 import sys, optparse, os
 from collections import defaultdict
 
 def global_feature_vector(feat_list, tag_list):
     vec = {}
-
     feat_index = 0
+
     for i in range(0, len(tag_list)):
         (feat_index, feats) = perc.feats_for_word(feat_index, feat_list)
         for feat in feats:
@@ -43,12 +13,12 @@ def global_feature_vector(feat_list, tag_list):
                 vec[(feat, tag_list[i])] += 1;
             else:
                 vec[(feat, tag_list[i])] = 1;
+
     return vec
 
 def update_weight_vector(feat_vec, incre_vec, flag):
     for vec in incre_vec:
         feat_vec[vec] += incre_vec[vec] * flag
-
 
 def perc_train(train_data, tagset, numepochs):
     feat_vec = defaultdict(int)
@@ -90,4 +60,3 @@ if __name__ == '__main__':
     print >>sys.stderr, "done."
     feat_vec = perc_train(train_data, tagset, int(opts.numepochs))
     perc.perc_write_to_file(feat_vec, opts.modelfile)
-
