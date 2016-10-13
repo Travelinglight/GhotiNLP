@@ -29,14 +29,12 @@ Inside the perceptron training loop:
 """
 
 import sys, optparse, os
-
-if os.path.abspath(".") not in sys.path:
-    sys.path.insert(0, os.path.abspath("."))
-if os.path.abspath("..") not in sys.path:
-    sys.path.insert(0, os.path.abspath(".."))
-
-import perc
 from collections import defaultdict
+
+# Add the parent directory into search paths so that we can import perc
+sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
+import perc
+
 
 def get_global_vector(labels, feat_list):
     """
@@ -44,7 +42,7 @@ def get_global_vector(labels, feat_list):
     :param feat_list: a list of features on words and POS tags, e.g. ['U12:VBDq', ...]
     :return: a dict of features with chuncking labels, e.g. {('U12:VBDq'): 1, ...}
     """
-    global_vector = {}
+    global_vector = defaultdict(int)
 
     index = -1
     prev_tag = 'B_-1'
@@ -59,22 +57,16 @@ def get_global_vector(labels, feat_list):
         if feat_value[0] == 'B':
             feat_value = 'B:' + prev_tag
 
-        if (feat_value, labels[index]) in global_vector:
-            global_vector[(feat_value, labels[index])] += 1
-        else:
-            global_vector[(feat_value, labels[index])] = 1
-
+        global_vector[(feat_value, labels[index])] += 1
 
     return global_vector
 
 
 def add_vector(a, b, k):
     for key in b:
-        if key in a:
-            a[key] += b[key] * k
-        else:
-            a[key] = b[key] * k
-
+        a[key] += b[key] * k
+        if a[key] == 0:
+            del a[key]
     return a
 
 
@@ -97,21 +89,29 @@ def perc_train(train_data, tagset, numepochs):
     """
     feat_vec = defaultdict(int)
     avg_vec = defaultdict(int)
-    #for t in range(numepochs):
     default_tag = tagset[0]
     for t in range(numepochs):
+        error_num = 0
         for (labeled_list, feat_list) in train_data:
             std_labels = get_labels(labeled_list)
             output = perc.perc_test(feat_vec, labeled_list, feat_list, tagset, default_tag)
+            if std_labels != output:
+                error_num += 1
             gold_global_vector = get_global_vector(std_labels, feat_list)
             current_global_vector = get_global_vector(output, feat_list)
-            feat_vec = add_vector(feat_vec, gold_global_vector, 1)
-            feat_vec = add_vector(feat_vec, current_global_vector, -1)
+            add_vector(feat_vec, gold_global_vector, 1)
+            add_vector(feat_vec, current_global_vector, -1)
 
-        avg_vec = add_vector(avg_vec, feat_vec, 1)
-        perc.perc_write_to_file({key: float(avg_vec[key])/((t+1) * len(train_data)) for key in avg_vec}, opts.modelfile + str(t))
+        print >>sys.stderr, "Epoch", t + 1, "done. # of incorrect sentences: ", error_num
+        # Supposedly we should average over all epoch * len(train_data) feature vectors,
+        # but that would lead to too many long-vector additions and is painfully slow.
+        add_vector(avg_vec, feat_vec, 1)
+        perc.perc_write_to_file(
+            {key: float(avg_vec[key]) / (t + 1) for key in avg_vec},
+            opts.modelfile + str(t)
+        )
 
-    return {key: float(avg_vec[key])/(numepochs * len(train_data)) for key in avg_vec}
+    return {key: float(avg_vec[key]) / numepochs for key in avg_vec}
 
 
 if __name__ == '__main__':
@@ -135,4 +135,3 @@ if __name__ == '__main__':
     print >>sys.stderr, "done."
     feat_vec = perc_train(train_data, tagset, int(opts.numepochs))
     perc.perc_write_to_file(feat_vec, opts.modelfile)
-
