@@ -6,16 +6,13 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 import perc
 
 def global_feature_vector(feat_list, tag_list):
-    vec = {}
+    vec = defaultdict(int)
     feat_index = 0
 
     for i in range(0, len(tag_list)):
         (feat_index, feats) = perc.feats_for_word(feat_index, feat_list)
         for feat in feats:
-            if (feat, tag_list[i]) in vec:
-                vec[(feat, tag_list[i])] += 1;
-            else:
-                vec[(feat, tag_list[i])] = 1;
+            vec[(feat, tag_list[i])] += 1;
 
     return vec
 

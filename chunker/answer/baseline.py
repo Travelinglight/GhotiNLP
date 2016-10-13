@@ -48,7 +48,7 @@ def get_global_vector(labels, feat_list):
     :param feat_list: a list of features on words and POS tags, e.g. ['U12:VBDq', ...]
     :return: a dict of features with chuncking labels, e.g. {('U12:VBDq'): 1, ...}
     """
-    global_vector = {}
+    global_vector = defaultdict(int)
 
     index = -1
     prev_tag = 'B_-1'
@@ -63,22 +63,16 @@ def get_global_vector(labels, feat_list):
         if feat_value[0] == 'B':
             feat_value = 'B:' + prev_tag
 
-        if (feat_value, labels[index]) in global_vector:
-            global_vector[(feat_value, labels[index])] += 1
-        else:
-            global_vector[(feat_value, labels[index])] = 1
-
+        global_vector[(feat_value, labels[index])] += 1
 
     return global_vector
 
 
 def add_vector(a, b, k):
     for key in b:
-        if key in a:
-            a[key] += b[key] * k
-        else:
-            a[key] = b[key] * k
-
+        a[key] += b[key] * k
+        if a[key] == 0:
+            del a[key]
     return a
 
 
@@ -108,8 +102,8 @@ def perc_train(train_data, tagset, numepochs):
             output = perc.perc_test(feat_vec, labeled_list, feat_list, tagset, default_tag)
             gold_global_vector = get_global_vector(std_labels, feat_list)
             current_global_vector = get_global_vector(output, feat_list)
-            feat_vec = add_vector(feat_vec, gold_global_vector, 1)
-            feat_vec = add_vector(feat_vec, current_global_vector, -1)
+            add_vector(feat_vec, gold_global_vector, 1)
+            add_vector(feat_vec, current_global_vector, -1)
 
         perc.perc_write_to_file(feat_vec, opts.modelfile + str(t))
 
