@@ -6,20 +6,31 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 import perc
 
 def global_feature_vector(feat_list, tag_list):
-    vec = {}
-    feat_index = 0
+    global_vector = defaultdict(int)
 
-    for i in range(0, len(tag_list)):
-        (feat_index, feats) = perc.feats_for_word(feat_index, feat_list)
-        for feat in feats:
-            if feat == 'B' and i > 0:
-                feat = "B:" + tag_list[i-1]
-            if (feat, tag_list[i]) in vec:
-                vec[(feat, tag_list[i])] += 1;
-            else:
-                vec[(feat, tag_list[i])] = 1;
+    index = -1
+    prev_tag = 'B_-1'
+    for i in range(len(feat_list)):
+        feat_value = feat_list[i]
+        # check if we reached the feats for the next word
+        if feat_value[:4] == 'U00:':
+            index += 1
+            if (index > 0):
+                prev_tag = tag_list[index - 1]
 
-    return vec
+        if feat_value[0] == 'B':
+            feat_value = 'B:' + prev_tag
+
+        global_vector[(feat_value, tag_list[index])] += 1
+
+    return global_vector
+
+def add_vector(a, b, k):
+    for key in b:
+        a[key] += b[key] * k
+        if a[key] == 0:
+            del a[key]
+    return a
 
 def perc_train(train_data, tagset, numepochs):
     feat_vec = defaultdict(int)
@@ -43,49 +54,46 @@ def perc_train(train_data, tagset, numepochs):
                     vec_expected = global_feature_vector(feat_list, expected)
                     
                     # Calculate difference between output and expcted result    
-                    for vec in vec_output:
-                        vec_expected[vec] = vec_expected.get(vec, 0) - vec_output[vec]
+                    add_vector(vec_expected, vec_output, -1)
 
                     # include the weight calculated from comparing output and expcted result
-                    for vec in vec_expected:
+                    for feat in vec_expected:
                         
                         # Include the total weight during the time
-                        if vec in tau:
-                            sigma[vec] = sigma.get(vec, 0) + feat_vec[vec] * (t * m + i - tau[vec][1] * m - tau[vec][0])
-                        feat_vec[vec] += vec_expected[vec]
-                        sigma[vec] += vec_expected[vec] 
+                        if feat in tau:
+                            sigma[feat] += feat_vec[feat] * \
+                                (t * m + i - tau[feat][1] * m - tau[feat][0])
+                        feat_vec[feat] += vec_expected[feat]
+                        sigma[feat] += vec_expected[feat]
 
                         # Record the location where the dimension s is updated
-                        tau[vec] = (i, t)
+                        tau[feat] = (i, t)
 
                     error_num += 1
 
             # To deal with the last sentence in the last iteration
             else:    
                 # Include the total weight during the time
-                for vec in tau:
-                    sigma[vec] = sigma.get(vec, 0) + feat_vec[vec] * (T * m + m - tau[vec][1] * m - tau[vec][0])
+                for feat in tau:
+                    sigma[feat] += feat_vec[feat] * \
+                        (T * m + m - tau[feat][1] * m - tau[feat][0])
 
                 if output != expected:
                     vec_output = global_feature_vector(feat_list, output)
                     vec_expected = global_feature_vector(feat_list, expected)
 
                     # Calculate difference between output and expcted result    
-                    for vec in vec_output:
-                        vec_expected[vec] = vec_expected.get(vec, 0) - vec_output[vec]
+                    add_vector(vec_expected, vec_output, -1)
 
                     # include the weight calculated from comparing output and expcted result
-                    for vec in vec_expected:
-                        if vec in tau:
-                            sigma[vec] = sigma.get(vec, 0) + feat_vec[vec] * (t * m + i - tau[vec][1] * m - tau[vec][0])
-                        feat_vec[vec] += vec_expected[vec]
-                        sigma[vec] += vec_expected[vec]
+                    add_vector(feat_vec, vec_expected, 1)
+                    add_vector(sigma, vec_expected, 1)
 
                     error_num += 1
 
-        print "Number of mistakes: ", error_num
+        print >>sys.stderr, "Epoch", t + 1, "done. # of incorrect sentences: ", error_num
 
-    return {k: v / (numepochs * len(train_data)) for (k, v) in sigma.items()}
+    return {k: float(sigma[k]) / (numepochs * len(train_data)) for k in sigma}
 
 if __name__ == '__main__':
     optparser = optparse.OptionParser()
