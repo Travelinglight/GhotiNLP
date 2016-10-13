@@ -30,6 +30,10 @@ Inside the perceptron training loop:
 
 import sys, optparse, os
 
+# Add the parent directory into search paths so that we can import perc
+sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
+import perc
+
 if os.path.abspath(".") not in sys.path:
     sys.path.insert(0, os.path.abspath("."))
 if os.path.abspath("..") not in sys.path:

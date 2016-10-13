@@ -1,6 +1,9 @@
-import perc
 import sys, optparse, os
 from collections import defaultdict
+
+# Add the parent directory into search paths so that we can import perc
+sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
+import perc
 
 def global_feature_vector(feat_list, tag_list):
     vec = {}
