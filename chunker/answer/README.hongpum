@@ -1,0 +1,65 @@
+Hongpu Ma, hongpum@sfu.ca
+
+## My contribution to the homework solution
+
+1. Fixed some bugs in both the naive and the optimized version.
+2. Profiled the program and located the bottleneck (hotspot).
+3. Improved the efficiency of the bottleneck.
+4. Experimented with pypy.
+5. Code refactor and cleanup for the final version.
+6. Wrote the overall README.
+
+## My git commits to the group repository
+
+commit 17a9b33d11366ba0ab63a72cc925073379fba45c
+Author: Hexcles Ma <bob1211@gmail.com>
+Date:   Thu Oct 13 20:18:03 2016 -0700
+
+    More rename
+
+commit 1f9620bf8b978809f2444c3b277de70b2bb11099
+Author: Hexcles Ma <bob1211@gmail.com>
+Date:   Thu Oct 13 20:17:32 2016 -0700
+
+    Rename avg_chunk_ch.py to chunk.py (the final version)
+
+commit a886278b63418a980c8365d4467ea89928e135a8
+Author: Hexcles Ma <bob1211@gmail.com>
+Date:   Thu Oct 13 20:16:53 2016 -0700
+
+    Add README for chunk
+
+commit f72c6c8e4c46fab9da269ff4068251e5fde5517c
+Author: Hexcles Ma <bob1211@gmail.com>
+Date:   Thu Oct 13 12:40:10 2016 -0700
+
+    Fix two bugs in the lazy-average version
+    
+    * The first bigram was not computed correctly.
+    * There was an wrong update in the last iteration.
+    
+    Also improve the efficiency slightly.
+
+commit ea00a8d0bbc4af82f1ed864103b0e7910bfb59ee
+Author: Hexcles Ma <bob1211@gmail.com>
+Date:   Thu Oct 13 00:11:37 2016 -0700
+
+    Minor optimization on avg_perceptron
+
+commit 84c65142394efa77a2de7a01792dd88d3fc25514
+Author: Hexcles Ma <bob1211@gmail.com>
+Date:   Wed Oct 12 21:00:18 2016 -0700
+
+    Minor performance opt and make full use of defaultdict
+
+commit 9dafc526447f4f037d92d02579dde02abf33206a
+Author: Hexcles Ma <bob1211@gmail.com>
+Date:   Wed Oct 12 19:06:03 2016 -0700
+
+    Rename the baseline implementation
+
+commit d0b16f1320e901585deda7704fd18671b84f601a
+Author: Hexcles Ma <bob1211@gmail.com>
+Date:   Wed Oct 12 19:04:18 2016 -0700
+
+    Fix import paths
