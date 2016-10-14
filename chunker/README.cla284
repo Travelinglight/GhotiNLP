@@ -1,0 +1,46 @@
+Chauncey Liu, cla284@sfu.ca
+
+## My contribution to the homework solution
+
+1. Developed the chunker using the pseudo-code provided, which gets to the baseline. 
+2. Used the averaged perceptron algorithm without lazy-updating to improve the performance, but found program consumed much more time though accuracy improved.
+3. Made an evaluation on the time complexity of the program and found adding up weight vectors are extremely time-consuming.
+3. Implemented the averaged perceptron algorithm in a more efficient way, which does not add up the whole weight vector every time and has the similar efficiency compared with the baseline solution.
+4. Evaluated the program and tried using a more efficient way to update the weight vector. 
+5. Tried using violation fixing method but found result even worse.
+6. Tested the program and tried finding best epoch choice without overfitting.
+7. Gave advice to teammates on some ways to improve the performance, like considering the corner case and omitting the 0 values in the dictionary.
+8. Found bug in my submission and fixed it. Final commit reaches 93.689 with 10 epochs of iterations on the leaderboard and consumes acceptable time to run.
+
+
+## My formal commit to the group repository
+
+commit 7f0605f1aac9e1759d3e654822516a8c0111a83b
+Author: ChaunceyKiwi <chaunceykiwi@gmail.com>
+Date:   Tue Oct 11 18:41:11 2016 -0700
+
+    fix bug on bigram
+
+commit 79c1c48869da9b5eee9945f73faacec26267fa1f
+Author: ChaunceyKiwi <chaunceykiwi@gmail.com>
+Date:   Tue Oct 11 14:21:35 2016 -0700
+
+    add comment
+
+commit 25a965b9300a9799e70402a525fee60a0e11a28c
+Author: ChaunceyKiwi <chaunceykiwi@gmail.com>
+Date:   Tue Oct 11 13:56:11 2016 -0700
+
+    take the average of all feat_vec
+
+commit b1fb019aea50471e2f732e801bc8c1f4c7396451
+Author: ChaunceyKiwi <chaunceykiwi@gmail.com>
+Date:   Tue Oct 11 01:19:51 2016 -0700
+
+	Another version of baseline, reach 91.23 after 10 iteration
+
+commit ca24943c32344dafb76bf935fcb37e78ffc5d239
+Author: ChaunceyKiwi <chaunceykiwi@gmail.com>
+Date:   Tue Oct 11 01:16:36 2016 -0700
+
+	my version of baseline, reach 91.23 after 10 iteration
