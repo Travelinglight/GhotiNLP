@@ -97,3 +97,5 @@ ENV/
 .idea/*
 
 .DS_Store
+*/output*
+*/model*

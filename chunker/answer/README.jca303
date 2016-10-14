@@ -1,0 +1,45 @@
+Kingston Chen, jca303@sfu.ca
+
+## My contribution to the homework solution
+
+1. Implemented baseline chunker, achieved accuracy 92.88
+2. Implemented naive average perceptron, which add training vector to average vector $\sigma$ after each training epoch, instead of doing it after each sentence. Achieved accuracy 93.47
+3. Output the weight vector after each epoch, and wrote a bash script to automatically test the weight vectors.
+
+
+## My formal commit to the group repository
+commit a3d3852ab0e3dcaf434cc08c6aa94e312065a82b
+Author: Jingda Chen <holaelmundokingston@gmail.com>
+Date:   Tue Oct 11 13:04:00 2016 -0700
+
+    get_global_vec bug fixed, acccuracy raised by 1
+    
+commit 8f6f3502632ce976e1ec8c552b24a08d3397e86e
+Author: Jingda Chen <holaelmundokingston@gmail.com>
+Date:   Mon Oct 10 21:38:24 2016 -0700
+
+    avg_perceptron added
+
+commit 6da57dd22638743495231cf6867f87258805c3e1
+Author: Jingda Chen <holaelmundokingston@gmail.com>
+Date:   Mon Oct 10 20:41:38 2016 -0700
+
+    autorun script added
+
+commit 425f6ef66cdc81d9e86a4ff089eb39052f790b4b
+Author: Jingda Chen <holaelmundokingston@gmail.com>
+Date:   Mon Oct 10 16:48:08 2016 -0700
+
+    chunk.py comments added
+
+commit c1b8111e73e1bf5885cd906a665346bad31e2d65
+Author: Jingda Chen <holaelmundokingston@gmail.com>
+Date:   Sat Oct 8 11:38:27 2016 -0700
+
+    chunker baseline 91.23
+
+commit 54dc173f256485f8faf94294a172037f8b2cbd07
+Author: Jingda Chen <holaelmundokingston@gmail.com>
+Date:   Sat Oct 8 03:20:08 2016 -0700
+
+    chuncker baseline 90.75
