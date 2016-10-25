@@ -28,16 +28,17 @@ count_fe = defaultdict(float)
 count_e = defaultdict(float)
 
 # calculate French vocabulary size
-for (n, (f, e)) in enumerate(bitext):
-    for f_i in set(f):
-        f_voc[f_i] += 1
-f_voc = len(f_voc.items())
+f_voc = set()
+for (f, e) in bitext:
+    for f_i in f:
+        f_voc.add(f_i)
+V_f = len(f_voc)
 
 # initialize t0 uniformly
-for (n, (f, e)) in enumerate(bitext):
+for (f, e) in bitext:
     for f_i in set(f):
         for e_j in set(e):
-            t_old[(f_i, e_j)] = float(1) / f_voc
+            t_old[(f_i, e_j)] = 1.0 / V_f
 
 # calculate probabilities
 L_old = -float('inf')
@@ -45,9 +46,9 @@ epoch = 0
 while epoch < opts.max_iters:
     count_fe.clear()
     count_e.clear()
-    for (n, (f, e)) in enumerate(bitext):
+    for (f, e) in bitext:
         for f_i in set(f):
-            z = 0
+            z = 0.0
             for e_j in set(e):
                 z += t_old[(f_i, e_j)]
             for e_j in set(e):
@@ -58,7 +59,7 @@ while epoch < opts.max_iters:
     for (f_i, e_j) in count_fe:
         t_new[(f_i, e_j)] += count_fe[(f_i, e_j)] / count_e[e_j]
 
-    Pr = defaultdict(lambda:1.0)
+    Pr = defaultdict(lambda: 1.0)
 
     L_new = 0.0
     for (n, (f, e)) in enumerate(bitext):
@@ -80,7 +81,7 @@ while epoch < opts.max_iters:
 
 # decode
 a = defaultdict(int)
-for (n, (f, e)) in enumerate(bitext):
+for (f, e) in bitext:
     for i, f_i in enumerate(f):
         bestp = 0
         bestj = 0
