@@ -67,8 +67,8 @@ while True:
                 pr += t_new[f_i, e_j]
 
             Pr[n] *= pr
-        L_new += Pr[n]
-    L_new = math.log(L_new)
+        L_new += math.log(Pr[n])
+
     if L_new - L_old < 10**(-4):
         break
 
