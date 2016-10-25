@@ -21,9 +21,7 @@ if opts.logfile:
 sys.stderr.write("Training with baseline algorithm...\n")
 bitext = [[sentence.strip().split() for sentence in pair] for pair in zip(open(f_data), open(e_data))[:opts.num_sents]]
 
-t_old = defaultdict(float)
-t_new = defaultdict(float)
-f_voc = defaultdict(int)    # French vocabulary, later convert to vocabulary size
+t_fe = defaultdict(float)
 count_fe = defaultdict(float)
 count_e = defaultdict(float)
 
@@ -38,7 +36,7 @@ V_f = len(f_voc)
 for (f, e) in bitext:
     for f_i in set(f):
         for e_j in set(e):
-            t_old[(f_i, e_j)] = 1.0 / V_f
+            t_fe[(f_i, e_j)] = 1.0 / V_f
 
 # calculate probabilities
 L_old = -float('inf')
@@ -50,14 +48,14 @@ while epoch < opts.max_iters:
         for f_i in set(f):
             z = 0.0
             for e_j in set(e):
-                z += t_old[(f_i, e_j)]
+                z += t_fe[(f_i, e_j)]
             for e_j in set(e):
-                c = t_old[(f_i, e_j)] / z
+                c = t_fe[(f_i, e_j)] / z
                 count_fe[(f_i, e_j)] += c
                 count_e[e_j] += c
 
     for (f_i, e_j) in count_fe:
-        t_new[(f_i, e_j)] += count_fe[(f_i, e_j)] / count_e[e_j]
+        t_fe[(f_i, e_j)] += count_fe[(f_i, e_j)] / count_e[e_j]
 
     Pr = defaultdict(lambda: 1.0)
 
@@ -66,7 +64,7 @@ while epoch < opts.max_iters:
         for f_i in set(f):
             pr = 0.0
             for e_j in set(e):
-                pr += t_new[f_i, e_j]
+                pr += t_fe[f_i, e_j]
 
             Pr[n] *= pr
         L_new += math.log(Pr[n])
@@ -78,20 +76,14 @@ while epoch < opts.max_iters:
     sys.stderr.write("Iteration %d, L=%f\n" % (epoch, L_new))
     epoch += 1
 
-
 # decode
-a = defaultdict(int)
 for (f, e) in bitext:
     for i, f_i in enumerate(f):
         bestp = 0
         bestj = 0
         for j, e_j in enumerate(e):
-            if t_new[(f_i, e_j)] > bestp:
-                bestp = t_new[(f_i, e_j)]
+            if t_fe[(f_i, e_j)] > bestp:
+                bestp = t_fe[(f_i, e_j)]
                 bestj = j
-        a[i] = bestj
-
-for (f, e) in bitext:
-    for (i, f_i) in enumerate(f):
-        sys.stdout.write("%i-%i " % (i, a[i]))
+        sys.stdout.write("%i-%i " % (i, bestj))
     sys.stdout.write("\n")
