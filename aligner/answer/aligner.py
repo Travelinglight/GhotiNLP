@@ -9,7 +9,7 @@ optparser.add_option("-p", "--prefix", dest="fileprefix", default="hansards", he
 optparser.add_option("-e", "--english", dest="english", default="en", help="suffix of English (target language) filename (default=en)")
 optparser.add_option("-f", "--french", dest="french", default="fr", help="suffix of French (source language) filename (default=fr)")
 optparser.add_option("-l", "--logfile", dest="logfile", default=None, help="filename for logging output")
-optparser.add_option("-t", "--threshold", dest="threshold", default=0.5, type="float", help="threshold for alignment (default=0.5)")
+optparser.add_option("-i", "--max_iterations", dest="max_iters", default=sys.maxint, type="int", help="max number of iterations for training (if omitted, train until convergence)")
 optparser.add_option("-n", "--num_sentences", dest="num_sents", default=sys.maxint, type="int", help="Number of sentences to use for training and alignment")
 (opts, _) = optparser.parse_args()
 f_data = "%s.%s" % (os.path.join(opts.datadir, opts.fileprefix), opts.french)
@@ -18,7 +18,7 @@ e_data = "%s.%s" % (os.path.join(opts.datadir, opts.fileprefix), opts.english)
 if opts.logfile:
     logging.basicConfig(filename=opts.logfile, filemode='w', level=logging.INFO)
 
-sys.stderr.write("Training with baseline algorithm...")
+sys.stderr.write("Training with baseline algorithm...\n")
 bitext = [[sentence.strip().split() for sentence in pair] for pair in zip(open(f_data), open(e_data))[:opts.num_sents]]
 
 t_old = defaultdict(float)
@@ -41,7 +41,8 @@ for (n, (f, e)) in enumerate(bitext):
 
 # calculate probabilities
 L_old = -float('inf')
-while True:
+epoch = 0
+while epoch < opts.max_iters:
     count_fe.clear()
     count_e.clear()
     for (n, (f, e)) in enumerate(bitext):
@@ -72,9 +73,9 @@ while True:
     if L_new - L_old < 10**(-4):
         break
 
-    sys.stderr.write(str(L_new))
-    sys.stderr.write("\n")
     L_old = L_new
+    sys.stderr.write("Iteration %d, L=%f\n" % (epoch, L_new))
+    epoch += 1
 
 
 # decode
