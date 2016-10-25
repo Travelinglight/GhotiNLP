@@ -55,19 +55,19 @@ while epoch < opts.max_iters:
                 count_e[e_j] += c
 
     for (f_i, e_j) in count_fe:
-        t_fe[(f_i, e_j)] += count_fe[(f_i, e_j)] / count_e[e_j]
-
-    Pr = defaultdict(lambda: 1.0)
+        t_fe[(f_i, e_j)] = count_fe[(f_i, e_j)] / count_e[e_j]
 
     L_new = 0.0
     for (n, (f, e)) in enumerate(bitext):
+        Pr = 1.0
         for f_i in set(f):
             pr = 0.0
             for e_j in set(e):
-                pr = t_fe[f_i, e_j]
+                pr += t_fe[f_i, e_j]
 
-            Pr[n] *= pr
-        L_new += math.log(Pr[n])
+            Pr *= pr
+
+        L_new += math.log(Pr)
 
     if L_new - L_old < 10**(-4):
         break
