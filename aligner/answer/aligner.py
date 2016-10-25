@@ -64,7 +64,7 @@ while epoch < opts.max_iters:
         for f_i in set(f):
             pr = 0.0
             for e_j in set(e):
-                pr += t_fe[f_i, e_j]
+                pr = t_fe[f_i, e_j]
 
             Pr[n] *= pr
         L_new += math.log(Pr[n])
