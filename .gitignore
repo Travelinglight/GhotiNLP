@@ -98,4 +98,5 @@ ENV/
 
 .DS_Store
 */output*
+*/upload*
 */model*
