@@ -19,7 +19,7 @@ if opts.logfile:
     logging.basicConfig(filename=opts.logfile, filemode='w', level=logging.INFO)
 
 sys.stderr.write("Training with baseline algorithm...\n")
-bitext = [[sentence.strip().split() for sentence in pair] for pair in zip(open(f_data), open(e_data))[:opts.num_sents]]
+bitext = [[sentence.strip().lower().split() for sentence in pair] for pair in zip(open(f_data), open(e_data))[:opts.num_sents]]
 
 t_fe = defaultdict(float)
 count_fe = defaultdict(float)
@@ -45,11 +45,11 @@ while epoch < opts.max_iters:
     count_fe.clear()
     count_e.clear()
     for (f, e) in bitext:
-        for f_i in set(f):
+        for f_i in f:
             z = 0.0
-            for e_j in set(e):
+            for e_j in e:
                 z += t_fe[(f_i, e_j)]
-            for e_j in set(e):
+            for e_j in e:
                 c = t_fe[(f_i, e_j)] / z
                 count_fe[(f_i, e_j)] += c
                 count_e[e_j] += c
