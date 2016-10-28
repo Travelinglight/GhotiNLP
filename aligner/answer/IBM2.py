@@ -44,7 +44,7 @@ sys.stderr.write("Initializing t and q...\n")
 for (n, (f, e)) in enumerate(bitext):
     for i in range(len(f)):
         for j in range(len(e) + 1):
-            if i == 0:
+            if j == 0:
                 e_j = null_word
             else:
                 e_j = e[j - 1]
@@ -69,6 +69,8 @@ while epoch < opts.max_iters:
         for i, f_i in enumerate(f):
             # null_word is specially calculated instead of using
             # `e + [null_word]` for better performance
+
+            sys.stderr.write("i= %d, n= %d\n" % (i, n))
             z = t_fe[(f_i, null_word)] * q_ji[0][i][n]
             for j, e_j in enumerate(e):
                 z += t_fe[(f_i, e_j)] * q_ji[j + 1][i][n]
