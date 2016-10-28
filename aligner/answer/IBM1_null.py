@@ -46,7 +46,7 @@ for (f, e) in bitext:
 # calculate probabilities
 epoch = 0
 while epoch < opts.max_iters:
-    sys.stderr.write("Iteration %d" % (epoch))
+    sys.stderr.write("Iteration %d " % (epoch))
 
     count_fe.clear()
     count_e.clear()
