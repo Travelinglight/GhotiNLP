@@ -8,7 +8,7 @@ optparser.add_option("-p", "--prefix", dest="fileprefix", default="hansards", he
 optparser.add_option("-e", "--english", dest="english", default="en", help="suffix of English (target language) filename (default=en)")
 optparser.add_option("-f", "--french", dest="french", default="fr", help="suffix of French (source language) filename (default=fr)")
 optparser.add_option("-l", "--logfile", dest="logfile", default=None, help="filename for logging output")
-optparser.add_option("-i", "--max_iterations", dest="max_iters", default=5, type="int", help="max number of iterations for training (if omitted, train until convergence)")
+optparser.add_option("-i", "--max_iterations", dest="max_iters", default=5, type="int", help="number of iterations for training")
 optparser.add_option("-n", "--num_sentences", dest="num_sents", default=sys.maxint, type="int", help="Number of sentences to use for training and alignment")
 (opts, _) = optparser.parse_args()
 f_data = "%s.%s" % (os.path.join(opts.datadir, opts.fileprefix), opts.french)
