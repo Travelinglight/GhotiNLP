@@ -41,6 +41,11 @@ count_i = defaultdict(float)
 
 # initialize t0 and q0 uniformly
 sys.stderr.write("Initializing t and q...\n")
+for i in range(200):
+    q_ji.append([])
+    for j in range(200):
+        q_ji[i].append([])
+
 for (n, (f, e)) in enumerate(bitext):
     for i in range(len(f)):
         for j in range(len(e) + 1):
@@ -51,10 +56,6 @@ for (n, (f, e)) in enumerate(bitext):
             f_i = f[i]
 
             t_fe[(f_i, e_j)] = 1.0 / V_f
-            if len(q_ji) - 1 < j:
-                q_ji.append([])
-            if len(q_ji[j]) - 1 < i:
-                q_ji[j].append([])
             q_ji[j][i].append(1.0 / (len(e) + 1))
 
 # calculate probabilities
@@ -70,7 +71,6 @@ while epoch < opts.max_iters:
             # null_word is specially calculated instead of using
             # `e + [null_word]` for better performance
 
-            sys.stderr.write("i= %d, n= %d\n" % (i, n))
             z = t_fe[(f_i, null_word)] * q_ji[0][i][n]
             for j, e_j in enumerate(e):
                 z += t_fe[(f_i, e_j)] * q_ji[j + 1][i][n]
