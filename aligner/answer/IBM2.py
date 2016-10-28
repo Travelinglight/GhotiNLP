@@ -41,9 +41,9 @@ count_i = defaultdict(float)
 
 # initialize t0 and q0 uniformly
 sys.stderr.write("Initializing t and q...\n")
-for i in range(200):
+for i in range(500):
     q_ji.append([])
-    for j in range(200):
+    for j in range(500):
         q_ji[i].append([])
 
 for (n, (f, e)) in enumerate(bitext):
@@ -71,6 +71,7 @@ while epoch < opts.max_iters:
             # null_word is specially calculated instead of using
             # `e + [null_word]` for better performance
 
+            sys.stderr.write("i= %d, n= %d\n" % (i, n))
             z = t_fe[(f_i, null_word)] * q_ji[0][i][n]
             for j, e_j in enumerate(e):
                 z += t_fe[(f_i, e_j)] * q_ji[j + 1][i][n]
