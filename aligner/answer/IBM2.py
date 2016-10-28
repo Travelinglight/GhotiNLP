@@ -33,7 +33,7 @@ null_word = '__NULL__'
 add_n = 0.01
 
 t_fe = defaultdict(float)
-q_fe = defaultdict(float)
+q_ji = []
 count_fe = defaultdict(float)
 count_e = defaultdict(float)
 count_ji = defaultdict(float)
@@ -42,16 +42,20 @@ count_i = defaultdict(float)
 # initialize t0 and q0 uniformly
 sys.stderr.write("Initializing t and q...\n")
 for (n, (f, e)) in enumerate(bitext):
-    for i in range(1, len(f) + 1):
-        for j in range(0, len(e) + 1):
+    for i in range(len(f)):
+        for j in range(len(e) + 1):
             if i == 0:
                 e_j = null_word
             else:
                 e_j = e[j - 1]
+            f_i = f[i]
 
-            f_i = f[i - 1]
             t_fe[(f_i, e_j)] = 1.0 / V_f
-            q_fe[(j - 1, i - 1, n)] = 1.0 / (len(e) + 1)
+            if len(q_ji) - 1 < j:
+                q_ji.append([])
+            if len(q_ji[j]) - 1 < i:
+                q_ji[j].append([])
+            q_ji[j][i].append(1.0 / (len(e) + 1))
 
 # calculate probabilities
 sys.stderr.write("Training IBM Model 2 with one null word and smoothing...\n")
@@ -65,34 +69,35 @@ while epoch < opts.max_iters:
         for i, f_i in enumerate(f):
             # null_word is specially calculated instead of using
             # `e + [null_word]` for better performance
-            z = t_fe[(f_i, null_word)] * q_fe[(0, i, n)]
+            z = t_fe[(f_i, null_word)] * q_ji[0][i][n]
             for j, e_j in enumerate(e):
-                z += t_fe[(f_i, e_j)] * q_fe[(j, i, n)]
-            c = t_fe[(f_i, null_word)] * q_fe[(0, i, n)] / z
+                z += t_fe[(f_i, e_j)] * q_ji[j + 1][i][n]
+            c = t_fe[(f_i, null_word)] * q_ji[0][i][n] / z
 
             count_fe[(f_i, null_word)] += c
             count_e[null_word] += c
-            count_ji[(-1, i, n)] += c
+            count_ji[(0, i, n)] += c
             count_i[(i, n)] += c
-            for e_j in e:
-                c = t_fe[(f_i, e_j)] * q_fe[(j, i, n)] / z
+            for j, e_j in enumerate(e):
+                c = t_fe[(f_i, e_j)] * q_ji[j + 1][i][n] / z
                 count_fe[(f_i, e_j)] += c
                 count_e[e_j] += c
-                count_ji[(j, i, n)] += c
+                count_ji[(j + 1, i, n)] += c
                 count_i[(i, n)] += c
 
     for (f_i, e_j) in count_fe:
         t_fe[(f_i, e_j)] = (count_fe[(f_i, e_j)] + add_n) / (count_e[e_j] + add_n * V_f)
+
     for (j, i, n) in count_ji:
-        q_fe[(j, i, n)] = (count_ji[(j, i, n)] + add_n) / (count_i[(i, n)] + add_n * (len(bitext[n][1]) + 1))
+        q_ji[j][i][n] = (count_ji[(j, i, n)] + add_n) / (count_i[(i, n)] + add_n * (len(bitext[n][1]) + 1))
 
     L = 0.0
     for (n, (f, e)) in enumerate(bitext):
         Pr = 1.0
         for i, f_i in enumerate(f):
-            pr = t_fe[(f_i, null_word)] * q_fe[(-1, i, n)]
+            pr = t_fe[(f_i, null_word)] * q_ji[0][i][n]
             for j, e_j in enumerate(e):
-                pr += t_fe[f_i, e_j] * q_fe[(j, i, n)]
+                pr += t_fe[f_i, e_j] * q_ji[j + 1][i][n]
 
             Pr *= pr
 
@@ -106,11 +111,11 @@ while epoch < opts.max_iters:
 sys.stderr.write("Decoding...\n")
 for (n, (f, e)) in enumerate(bitext):
     for i, f_i in enumerate(f):
-        bestp = t_fe[(f_i, null_word)] * q_fe[(-1, i, n)]
+        bestp = t_fe[(f_i, null_word)] * q_ji[0][i][n]
         bestj = -1
         for j, e_j in enumerate(e):
-            if t_fe[(f_i, e_j)] * q_fe[(j, i, n)] > bestp:
-                bestp = t_fe[(f_i, e_j)] * q_fe[(j, i, n)]
+            if t_fe[(f_i, e_j)] * q_ji[j + 1][i][n] > bestp:
+                bestp = t_fe[(f_i, e_j)] * q_ji[j + 1][i][n]
                 bestj = j
         if bestj >= 0:
             sys.stdout.write("%i-%i " % (i, bestj))

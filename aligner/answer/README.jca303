@@ -1,0 +1,45 @@
+Kingston Chen, jca303@sfu.ca
+
+## My contribution to the homework solution
+
+1. Implemented baseline aligner with bugs, which are fixed by Hongpu Ma, and get AER 0.432
+2. Adding null word to sourse language, which is debugged by Hongpu Ma, and get AER 0.38
+3. Implemented IBM model 2 with null word and smoothing, and get AER 
+
+
+## My formal commit to the group repository
+commit 0c14910d439510de324700c6bc218e13d400f104
+Author: Jingda Chen <holaelmundokingston@gmail.com>
+Date:   Thu Oct 27 21:00:14 2016 -0700
+
+    IBM model 2 added
+    
+commit ccb2a6e495d01fa1e58aca0494496483fa9a432f
+Author: Jingda Chen <holaelmundokingston@gmail.com>
+Date:   Thu Oct 27 11:45:17 2016 -0700
+
+    single null word added
+
+commit 8a4d6f9bd9433c72c3952c24bd4b72a1494e1d33
+Author: Jingda Chen <holaelmundokingston@gmail.com>
+Date:   Tue Oct 25 02:28:54 2016 -0700
+
+    += -> = bug fixed
+
+commit dd3391c08de5f55bdecd9110d83520566b792078
+Author: Jingda Chen <holaelmundokingston@gmail.com>
+Date:   Tue Oct 25 02:09:50 2016 -0700
+
+    += -> =
+
+commit 11c07f34d5e470854b303c8f368943ffaa3487c2
+Author: Jingda Chen <holaelmundokingston@gmail.com>
+Date:   Mon Oct 24 23:56:29 2016 -0700
+
+    log probability bug fixed
+
+commit 74fde94913d18d1df20c221965b5ed33fe335a0d
+Author: Jingda Chen <holaelmundokingston@gmail.com>
+Date:   Mon Oct 24 23:12:24 2016 -0700
+
+    baseline implemented, waiting for result
