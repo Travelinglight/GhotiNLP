@@ -1,0 +1,83 @@
+Hongpu Ma, hongpum@sfu.ca
+
+## My contribution to the homework solution
+
+1. Fixed fatal bugs in the baseline version to make it work.
+2. Implemented add-n smoothing and experimented with different n.
+3. Implemented bidirectional model.
+4. Code cleanup for the final version.
+5. Wrote the overall README.
+
+## My git commits to the group repository
+
+commit bc7caf0cff31a4903434ff01a4e27af428abf2fa
+Author: Robert Ma (Hexcles) <bob1211@gmail.com>
+Date:   Thu Oct 27 23:23:17 2016 -0700
+
+    Bidi-version Model 1
+
+commit 3ed5f527ee61297675299f6ffa3cb84d3d728aa2
+Merge: 7d558b0 75fa10e
+Author: Robert Ma (Hexcles) <bob1211@gmail.com>
+Date:   Thu Oct 27 23:18:35 2016 -0700
+
+    Merge branch 'master' of github.com:Travelinglight/GhotiNLP
+
+commit 7d558b0f974971baefcfa7df761a17598069719f
+Author: Robert Ma (Hexcles) <bob1211@gmail.com>
+Date:   Thu Oct 27 23:17:20 2016 -0700
+
+    Add README
+
+commit 9278ce00c51092d5d855bbcfa66cbdcc857eb884
+Author: Robert Ma (Hexcles) <bob1211@gmail.com>
+Date:   Thu Oct 27 22:33:39 2016 -0700
+
+    Add best ans
+
+commit f210a7486d8270571801ce86680f474532e0d5d5
+Author: Robert Ma (Hexcles) <bob1211@gmail.com>
+Date:   Thu Oct 27 22:12:22 2016 -0700
+
+    Renaming
+
+commit 1dcbe34688186f90fe890221e610a0978d50ade1
+Author: Robert Ma (Hexcles) <bob1211@gmail.com>
+Date:   Thu Oct 27 18:51:01 2016 -0700
+
+    Minor fix
+
+commit 3e441cd414dd8862f545c08a5a9eff46b4bc3058
+Author: Robert Ma (Hexcles) <bob1211@gmail.com>
+Date:   Thu Oct 27 18:24:35 2016 -0700
+
+    Fix a help text
+
+commit ff11174368e9c2d6c43bac2e1caf2a63a32b39d9
+Author: Robert Ma (Hexcles) <bob1211@gmail.com>
+Date:   Thu Oct 27 18:22:34 2016 -0700
+
+    Improve Model 1 (null, add_n)
+    
+    * Correctly implement the null word.
+    * Use add_n smoothing.
+    * Convert letters to lower case.
+
+commit 355a5f22e4f05f4e2b415b24af221102cc80ec68
+Author: Robert Ma (Hexcles) <bob1211@gmail.com>
+Date:   Thu Oct 27 17:28:51 2016 -0700
+
+    Optimize baseline solution
+    
+    1. Convert all letters to lowercase.
+    2. The use of `set()` when counting is wrong; in fact we need to count
+       multiple appearances.
+
+commit 59c17121c98b4e63c2be76e4298853f3aa8b2222
+Author: Hexcles Ma <bob1211@gmail.com>
+Date:   Tue Oct 25 01:49:14 2016 -0700
+
+    Fix two fatal bugs
+    
+    1. The confussion of t_new and t_old (uninitialized, misused, etc.)
+    2. The decode part was wrong because it stored the last mapping
