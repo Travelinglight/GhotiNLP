@@ -38,9 +38,11 @@ for f in french:
     for h in sorted(stack.itervalues(),key=lambda h: -h.logprob)[:opts.s]: # prune
       for j in xrange(i+1,len(f)+1):
         for k in xrange(i, j+1):
+          # Divide f[i:j] -> (f[i:k],f[k:j]) 
           f1 = f[i:k]
           f2 = f[k:j]
 
+          # If second division is empty
           if (f1 in tm) and (len(f2) == 0):
             for phrase in tm[f1]:
               logprob = h.logprob + phrase.logprob
@@ -53,31 +55,30 @@ for f in french:
               if lm_state not in stacks[j] or stacks[j][lm_state].logprob < logprob: # second case is recombination
                 stacks[j][lm_state] = new_hypothesis 
 
+          # If both divisions can be found in TM
           if (f1 in tm) and (f2 in tm):
             for phrase1 in tm[f1]:
               for phrase2 in tm[f2]: 
                 phraseCombine1 = models.phrase(phrase1.english + " " + phrase2.english, phrase1.logprob + phrase2.logprob)
                 phraseCombine2 = models.phrase(phrase2.english + " " + phrase1.english, phrase1.logprob + phrase2.logprob)
-
                 logprob = h.logprob + phrase1.logprob + phrase2.logprob
 
-                logprob1 = 0
-                logprob2 = 0
-
-                # Apply API of language model to score
+                # Apply API of LM to score
                 lm_state1 = h.lm_state
+                logprob1 = 0
                 for word in phraseCombine1.english.split():
                   (lm_state1, word_logprob) = lm.score(lm_state1, word)
                   logprob1 += word_logprob
                 logprob1 += lm.end(lm_state1) if k == len(f) else 0.0
 
-                # Apply API of language model to score
                 lm_state2 = h.lm_state
+                logprob2 = 0
                 for word in phraseCombine2.english.split():
                   (lm_state2, word_logprob) = lm.score(lm_state2, word)
                   logprob2 += word_logprob
                 logprob2 += lm.end(lm_state2) if k == len(f) else 0.0
 
+                # Choose the better combination
                 if(logprob1 > logprob2):
                   logprob += logprob1
                   lm_state = lm_state1
@@ -93,6 +94,7 @@ for f in french:
                 # second case is recombination
                 if lm_state not in stacks[j] or stacks[j][lm_state].logprob < logprob:
                   stacks[j][lm_state] = new_hypothesis 
+                  
   winner = max(stacks[-1].itervalues(), key=lambda h: h.logprob)
   def extract_english(h): 
     return "" if h.predecessor is None else "%s%s " % (extract_english(h.predecessor), h.phrase.english)
