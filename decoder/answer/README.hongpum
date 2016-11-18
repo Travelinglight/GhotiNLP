@@ -1,0 +1,89 @@
+Hongpu Ma, hongpum@sfu.ca
+
+## My contribution to the homework solution
+
+1. Minor bug fixes and performance tweaks.
+2. Improved the recombination correctly to collide all indistinguishable hypotheses
+   together to leverage all the potential speed up.
+3. Added an important cache technique to greatly improve the speed (see below).
+4. Experimented with different reordering (distortion) parameters.
+5. Ported the future cost estimation from Chauncey into the improved baseline.
+6. Code cleanup for the final version.
+
+Note on the cache technique:
+
+For each French sentence, we precalculate a table to cache the indexes of all known French
+phrases in the sentence, along with their 01 coverage strings, candidate translations etc.
+This greatly speeds up the enumeration of the next French phrase and some related
+calculations.
+
+## My git commits to the group repository
+
+commit 387bec93ad34c29f25dc0767a4b58ab564f65a0b
+Author: Robert Ma (Hexcles) <bob1211@gmail.com>
+Date:   Thu Nov 17 22:58:57 2016 -0800
+
+    Minor tweaks
+
+commit 84ba92327a5da88274e89a83a29a89d865819665
+Author: Robert Ma (Hexcles) <bob1211@gmail.com>
+Date:   Thu Nov 17 21:02:26 2016 -0800
+
+    Add best output
+
+commit 807363ee7cb4d1a9165ff792d0358cae4c414ee5
+Author: Robert Ma (Hexcles) <bob1211@gmail.com>
+Date:   Thu Nov 17 21:02:09 2016 -0800
+
+    Combine future cost with baseline
+
+commit 6cbd07250e7a10a3359cb5abef96e4878c6897f9
+Author: Robert Ma (Hexcles) <bob1211@gmail.com>
+Date:   Thu Nov 17 21:01:54 2016 -0800
+
+    Fix future cost to use tuned distortion
+
+commit b43b35ec28316f08cacccc0970dd0fcc49343a85
+Author: Robert Ma (Hexcles) <bob1211@gmail.com>
+Date:   Thu Nov 17 19:19:50 2016 -0800
+
+    Fine tune reordering
+
+commit dbb0a42014285540c13aa463681d9a8242353abe
+Author: Robert Ma (Hexcles) <bob1211@gmail.com>
+Date:   Thu Nov 17 19:04:07 2016 -0800
+
+    Fix distance
+
+commit edb0267357c113170fa31dcdead57eedff206a65
+Author: Robert Ma (Hexcles) <bob1211@gmail.com>
+Date:   Thu Nov 17 19:03:45 2016 -0800
+
+    Add search cache
+
+commit 164540e5d9fa4d77e10fcceea924d9743dd43462
+Author: Robert Ma (Hexcles) <bob1211@gmail.com>
+Date:   Thu Nov 17 18:37:08 2016 -0800
+
+    Minor tweaks
+
+commit c4b542eecedc7d7740991c7f16f3e71b44c42616
+Merge: 67693cb 8666eec
+Author: Robert Ma (Hexcles) <bob1211@gmail.com>
+Date:   Thu Nov 17 18:30:51 2016 -0800
+
+    Merge branch 'master' of github.com:Travelinglight/GhotiNLP
+
+commit 67693cb297c06846de501e11e1457d1a7b73e027
+Author: Robert Ma (Hexcles) <bob1211@gmail.com>
+Date:   Thu Nov 17 18:30:14 2016 -0800
+
+    Refactor baseline to improve speed
+    
+    The original baseline is now baseline_hu.py
+
+commit af23ebcf4c83ba25a45d03cd7408733c9c893cbd
+Author: Robert Ma (Hexcles) <bob1211@gmail.com>
+Date:   Thu Nov 17 11:07:04 2016 -0800
+
+    Remove a wrong file
