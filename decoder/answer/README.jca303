@@ -1,0 +1,20 @@
+Kingston Chen, jca303@sfu.ca
+
+## My contribution to the homework solution
+
+1. Implemented A* search for decoding: designed new future cost function and modified the algorithm to quit when k targets are reached. Got total corpus log probability -1644.188934.
+2. Wrote the overall README.
+
+
+## My formal commit to the group repository
+commit 0b31c8cd7715c74fa05b5e5290da40bc7b9867a8
+Author: Jingda Chen <holaelmundokingston@gmail.com>
+Date:   Thu Nov 17 23:04:33 2016 -0800
+
+    README.md added
+
+commit 897006b6053fbce182d75ac6d10501fc9acdc6aa
+Author: Jingda Chen <holaelmundokingston@gmail.com>
+Date:   Thu Nov 17 16:40:23 2016 -0800
+
+    A* search added
