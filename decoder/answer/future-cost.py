@@ -1,10 +1,16 @@
 #!/usr/bin/env python
 import optparse
+import os
 import sys
+from collections import namedtuple
+from math import log, sqrt
+
+# Add the parent directory into search paths so that we can import perc
+sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 import models
-from collections import namedtuple 
-from math import log
-alpha = 0.5 #reordering parameter
+
+
+alpha = 0.95 #reordering parameter
 maxDis = 2
 
 def ph(state, f, tm): 
@@ -137,7 +143,7 @@ for f in french:
           bitString = phraseTuple[3]
           futureList = getFutureList(bitString)
           futurecost = calculateFutureCost(futureList, futureCostTable)
-          logprob = h.logprob + phrase.logprob + log(alpha**abs(phraseTuple[0]-state.r)) + 2 * futurecost
+          logprob = h.logprob + phrase.logprob + log(alpha)*sqrt(abs(phraseTuple[0]-state.r)) + 2 * futurecost
 
           lm_state = ()
           lm_state += state.e1 if state.e1 is not None else ()
