@@ -3,7 +3,7 @@ import optparse
 import os
 import sys
 from collections import namedtuple 
-from math import log
+from math import log, sqrt
 
 # Add the parent directory into search paths so that we can import perc
 sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
@@ -11,7 +11,7 @@ import models
 
 
 # Parameter constants
-alpha = 0.9  #reordering parameter
+alpha = 0.95  #reordering parameter
 
 optparser = optparse.OptionParser()
 optparser.add_option("-i", "--input", dest="input", default="data/input", help="File containing sentences to translate (default=data/input)")
@@ -94,7 +94,7 @@ for f in french:
         # TM might give us multiple candidates for a fphrase.
         for phrase in tm_phrases:
           # log_tmprob and distortion
-          logprob = h.logprob + phrase.logprob + log(alpha**abs(distance))
+          logprob = h.logprob + phrase.logprob + log(alpha)*sqrt(abs(distance))
           # log_lmprob (N-gram)
           lm_state = h.lm_state
           for word in phrase.english.split():
