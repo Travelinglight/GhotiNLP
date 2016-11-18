@@ -44,8 +44,9 @@ def enumerate_phrases(f, coverage):
 
 sys.stderr.write("Decoding %s...\n" % (opts.input,))
 for f in french:
-  # logprob = log_lmprob + log_tmprob
+  # logprob = log_lmprob + log_tmprob + distortion_penalty
   # predecessor = previous hypothesis
+  # lm_state = N-gram state (the last one or two words)
   # last_frange = (i, j) the range of last translated phrase in f
   # phrase = the last TM phrase object (correspondence to f[last_frange])
   # coverage = bit string representing the translation coverage on f
@@ -59,20 +60,21 @@ for f in french:
   # lm_state affects LM; last_frange affects distortion; coverage affects available choices.
   stacks[0][(lm.begin(), None, 0)] = initial_hypothesis
   for i, stack in enumerate(stacks[:-1]):
-    print >> sys.stderr, "Stack[%d]:" % i
-    for h in sorted(stack.itervalues(),key=lambda h: -h.logprob)[:opts.s]: # prune
-      print >> sys.stderr, h.logprob, h.lm_state, bin(h.coverage),
-      if (h.last_frange):
-        print >> sys.stderr, unicode(' '.join(f[h.last_frange[0]:h.last_frange[1]]), 'utf8')
-      else:
-        print >> sys.stderr
+    if opts.verbose:
+      print >> sys.stderr, "Stack[%d]:" % i
+
+    # Top-k pruning
+    for h in sorted(stack.itervalues(),key=lambda h: -h.logprob)[:opts.s]:
+      if opts.verbose:
+        print >> sys.stderr, h.logprob, h.lm_state, bin(h.coverage), unicode(' '.join(f[h.last_frange[0]:h.last_frange[1]]), 'utf8')
+
       for (f_range, delta_coverage, tm_phrases) in enumerate_phrases(f, h.coverage):
         # f_range = (i, j) of the enumerated next phrase to be translated
         # delta_coverage = coverage of f_range
         # tm_phrases = TM entries corresponding to fphrase f[f_range]
         length = i + f_range[1] - f_range[0]
         coverage = h.coverage | delta_coverage
-        distance = f_range[0] - h.last_frange[0] if h.last_frange else 0
+        distance = f_range[0] - h.last_frange[0]
 
         # TM might give us multiple candidates for a fphrase.
         for phrase in tm_phrases:
@@ -89,7 +91,7 @@ for f in french:
           new_state = (lm_state, f_range, coverage)
           new_hypothesis = hypothesis(logprob, lm_state, h, f_range, phrase, coverage)
           if new_state not in stacks[length] or \
-              stacks[length][new_state].logprob < logprob:  # recombination
+              logprob > stacks[length][new_state].logprob:  # recombination
             stacks[length][new_state] = new_hypothesis
 
   winner = max(stacks[len(f)].itervalues(), key=lambda h: h.logprob)
@@ -105,4 +107,3 @@ for f in french:
     tm_logprob = extract_tm_logprob(winner)
     sys.stderr.write("LM = %f, TM = %f, Total = %f\n" % 
       (winner.logprob - tm_logprob, tm_logprob, winner.logprob))
-
