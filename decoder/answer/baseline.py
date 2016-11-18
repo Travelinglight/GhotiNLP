@@ -33,17 +33,32 @@ for word in set(sum(french,())):
     tm[(word,)] = [models.phrase(word, 0.0)]
 
 
-def enumerate_phrases(f, coverage):
-  for i in xrange(0,len(f)):
+def generate_phrase_cache(f):
+  cache = []
+  for i in xrange(0, len(f)):
+    entries = []
     bitstring = 0
-    for j in xrange(i+1,len(f)+1):
+    for j in xrange(i+1, len(f)+1):
       bitstring += 1 << (len(f) - j)
-      if ((bitstring & coverage) == 0) and (f[i:j] in tm):
-        yield ((i,j), bitstring, tm[f[i:j]])
+      if f[i:j] in tm:
+        entries.append({'end': j, 'bitstring': bitstring, 'phrase': tm[f[i:j]]})
+    cache.append(entries)
+  return cache
+
+
+def enumerate_phrases(f_cache, coverage):
+  for i in xrange(0, len(f_cache)):
+    bitstring = 0
+    for entry in f_cache[i]:
+      if (entry['bitstring'] & coverage) == 0:
+        yield ((i, entry['end']), entry['bitstring'], entry['phrase'])
 
 
 sys.stderr.write("Decoding %s...\n" % (opts.input,))
 for f in french:
+  # Generate cache for phrase segmentations.
+  f_cache = generate_phrase_cache(f)
+
   # logprob = log_lmprob + log_tmprob + distortion_penalty
   # predecessor = previous hypothesis
   # lm_state = N-gram state (the last one or two words)
@@ -68,7 +83,7 @@ for f in french:
       if opts.verbose:
         print >> sys.stderr, h.logprob, h.lm_state, bin(h.coverage), unicode(' '.join(f[h.last_frange[0]:h.last_frange[1]]), 'utf8')
 
-      for (f_range, delta_coverage, tm_phrases) in enumerate_phrases(f, h.coverage):
+      for (f_range, delta_coverage, tm_phrases) in enumerate_phrases(f_cache, h.coverage):
         # f_range = (i, j) of the enumerated next phrase to be translated
         # delta_coverage = coverage of f_range
         # tm_phrases = TM entries corresponding to fphrase f[f_range]
