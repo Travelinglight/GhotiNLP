@@ -59,13 +59,11 @@ def precalcuate_future_cost(f):
   futureCostTable = {}
   for i in xrange(0,len(f)):
     for j in xrange(i+1,len(f)+1):
-      phraseCheapestTable[i,j] = -sys.maxint
       if f[i:j] in tm:
+        phraseCheapestTable[i,j] = -sys.maxint
         for phrase in tm[f[i:j]]:
           if phrase.logprob > phraseCheapestTable[i,j]:
             phraseCheapestTable[i,j] = phrase.logprob
-      if phraseCheapestTable[i,j] == -sys.maxint:
-        del phraseCheapestTable[i,j]
   for i in xrange(0,len(f)):
     futureCostTable[i,1] = phraseCheapestTable[i,i+1]
     for j in xrange(2,len(f)+1-i):
