@@ -2,14 +2,16 @@
 ## Algorithm outline
 The final version (in decode.py) is based on the baseline beam-search algorithm (Collins), which combined top-k pruning and Viterbi DP. On top of that we added three improvements:
 
-1. We cashed the bitstring and translation phrases for each phrase in the source language, so that they don't have to be calculated repeatedly each time the phrase is used to update a hypothesis. This improved the performance a lot and enabled us to set the beam to 5000.
+1. We implemented the recombination of indistinguishable hypotheses (in our model, those with the same coverage, same ending words and same last source phrase).
 
-2.  We addedd `future cost` to the criteria in top-k pruning instead of simply using `log probability`. This eliminates the preference on the hypotheses with good log probability but may have very bad future in top-k pruning. <br> <br>
+2. We cached the bitstrings and candidate translations for each phrase in the source language, as well as their indexes, so that they can be enumerated efficiently and don't have to be calculated repeatedly each time the phrase is used to update a hypothesis. This improved the performance a lot and enabled us to set the beam to 5000.
+
+3.  We added `future cost` to the criteria in top-k pruning instead of simply using `log probability`. This eliminates the preference on the hypotheses with good log probability but may have very bad future in top-k pruning. <br> <br>
   To calculate the future cost, we first pre-compute a futureCostTable `FCT[i, j]`. `FCT[i, j]` is the highest probability among all the possible translations for words from index i to j in the source language. The words from index i to j could be regarded as a single phrase or multiple phrases. Then for each hypothesis we sum up all `FCT[i, j]` where words from index i to j are not translated.
 
-3.  We added distortion penalty to prevent ridiculous rearrangements in the target language. We used square root of distance as distortion penalty:
-$$\sqrt{| Ph_i.s - Ph_{i-1}.t |}$$
-Where $Ph_i.s$ is the start index of the current phrase and  $Ph_{i-1}.t$ is the end index of the previous phrase.
+4.  We added distortion penalty to prevent ridiculous rearrangements in the target language. We used square root of distance to calculate distortion penalty:
+$$\alpha^{\sqrt{| Ph_i.s - Ph_{i-1}.t |}}$$
+Where $Ph_i.s$ is the start index of the current phrase and  $Ph_{i-1}.t$ is the end index of the previous phrase. We chose $\alpha = 0.95$ at last.
 
 
 ## Other experimented approaches

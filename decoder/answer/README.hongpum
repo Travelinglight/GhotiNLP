@@ -10,13 +10,6 @@ Hongpu Ma, hongpum@sfu.ca
 5. Ported the future cost estimation from Chauncey into the improved baseline.
 6. Code cleanup for the final version.
 
-Note on the cache technique:
-
-For each French sentence, we precalculate a table to cache the indexes of all known French
-phrases in the sentence, along with their 01 coverage strings, candidate translations etc.
-This greatly speeds up the enumeration of the next French phrase and some related
-calculations.
-
 ## My git commits to the group repository
 
 commit 387bec93ad34c29f25dc0767a4b58ab564f65a0b
