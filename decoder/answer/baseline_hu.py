@@ -9,9 +9,33 @@ from math import log
 sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 import models
 
+alpha = 0.9 #reordering parameter
 
-# Parameter constants
-alpha = 0.9  #reordering parameter
+def ph(state, f, tm): 
+  returnlist = []
+  for i in xrange(0,len(f)):
+    for j in xrange(i+1,len(f)+1):
+      if f[i:j] in tm:
+        bitstring = 0
+        for k in xrange(i,j):
+          bitstring += pow(2,len(f)-1-k)
+        if (bitstring & state.bitString) == 0:
+          returnlist.append((i,j,tm[f[i:j]]))	
+  return returnlist
+    
+def next(phraseTuple, lm_state, p_state, length): 
+  state = namedtuple("state", "e1, e2, bitString, r")
+  bitstring = p_state.bitString
+  e1 = None
+  e2 = None
+  if len(lm_state) == 1:
+    e2 = (lm_state[0],)
+  elif len(lm_state) == 2:
+    e1 = (lm_state[0],)
+    e2 = (lm_state[1],)
+  for k in xrange(phraseTuple[0],phraseTuple[1]):
+    bitstring = bitstring | pow(2,length-1-k)
+  return state(e1,e2,bitstring,phraseTuple[1])
 
 optparser = optparse.OptionParser()
 optparser.add_option("-i", "--input", dest="input", default="data/input", help="File containing sentences to translate (default=data/input)")
@@ -32,71 +56,43 @@ for word in set(sum(french,())):
   if (word,) not in tm:
     tm[(word,)] = [models.phrase(word, 0.0)]
 
-
-def enumerate_phrases(f, coverage):
-  for i in xrange(0,len(f)):
-    bitstring = 0
-    for j in xrange(i+1,len(f)+1):
-      bitstring += 1 << (len(f) - j)
-      if ((bitstring & coverage) == 0) and (f[i:j] in tm):
-        yield ((i,j), bitstring, tm[f[i:j]])
-
-
 sys.stderr.write("Decoding %s...\n" % (opts.input,))
 for f in french:
-  # logprob = log_lmprob + log_tmprob
-  # predecessor = previous hypothesis
-  # last_frange = (i, j) the range of last translated phrase in f
-  # phrase = the last TM phrase object (correspondence to f[last_frange])
-  # coverage = bit string representing the translation coverage on f
-  hypothesis = namedtuple("hypothesis", "logprob, lm_state, predecessor, last_frange, phrase, coverage")
-  initial_hypothesis = hypothesis(0.0, lm.begin(), None, (0, 0), None, 0)
-  # stacks[# of covered words in f] (from 0 to |f|)
-  stacks = [{} for _ in xrange(len(f) + 1)]
-  # stacks[size][(lm_state, last_frange, coverage)]:
-  # recombination based on (lm_state, last_frange, coverage).
-  # For different hypotheses with the same tuple, keep the one with the higher logprob.
-  # lm_state affects LM; last_frange affects distortion; coverage affects available choices.
-  stacks[0][(lm.begin(), None, 0)] = initial_hypothesis
+  # The following code implements a monotone decoding
+  # algorithm (one that doesn't permute the target phrases).
+  # Hence all hypotheses in stacks[i] represent translations of 
+  # the first i words of the input sentence. You should generalize
+  # this so that they can represent translations of *any* i words.
+  hypothesis = namedtuple("hypothesis", "logprob, state, predecessor, phrase")
+  state = namedtuple("state", "e1, e2, bitString, r")
+  initial_state = state(None,lm.begin(),0,0)
+  initial_hypothesis = hypothesis(0.0, initial_state, None, None)
+  stacks = [{} for _ in f] + [{}]
+  stacks[0][initial_state] = initial_hypothesis
   for i, stack in enumerate(stacks[:-1]):
     print >> sys.stderr, "Stack[%d]:" % i
     for h in sorted(stack.itervalues(),key=lambda h: -h.logprob)[:opts.s]: # prune
-      print >> sys.stderr, h.logprob, h.lm_state, bin(h.coverage),
-      if (h.last_frange):
-        print >> sys.stderr, unicode(' '.join(f[h.last_frange[0]:h.last_frange[1]]), 'utf8')
-      else:
-        print >> sys.stderr
-      for (f_range, delta_coverage, tm_phrases) in enumerate_phrases(f, h.coverage):
-        # f_range = (i, j) of the enumerated next phrase to be translated
-        # delta_coverage = coverage of f_range
-        # tm_phrases = TM entries corresponding to fphrase f[f_range]
-        length = i + f_range[1] - f_range[0]
-        coverage = h.coverage | delta_coverage
-        distance = f_range[0] - h.last_frange[0] if h.last_frange else 0
-
-        # TM might give us multiple candidates for a fphrase.
-        for phrase in tm_phrases:
-          # log_tmprob and distortion
-          logprob = h.logprob + phrase.logprob + log(alpha**abs(distance))
-          # log_lmprob (N-gram)
-          lm_state = h.lm_state
+      print >> sys.stderr, h.logprob, (h.state.e1, h.state.e2), bin(h.state.bitString)
+      state = h.state
+      for phraseTuple in ph(state, f, tm):
+        for phrase in phraseTuple[2]:
+          logprob = h.logprob + phrase.logprob + log(alpha**abs(phraseTuple[0]-state.r))
+          lm_state = ()
+          lm_state += state.e1 if state.e1 is not None else ()
+          lm_state += state.e2 if state.e2 is not None else ()
           for word in phrase.english.split():
             (lm_state, word_logprob) = lm.score(lm_state, word)
             logprob += word_logprob
-          # Don't forget the STOP N-gram if we just covered the whole sentence.
+          next_state = next(phraseTuple, lm_state, state, len(f))
+          length = bin(next_state.bitString).count("1") 
           logprob += lm.end(lm_state) if length == len(f) else 0.0
-
-          new_state = (lm_state, f_range, coverage)
-          new_hypothesis = hypothesis(logprob, lm_state, h, f_range, phrase, coverage)
-          if new_state not in stacks[length] or \
-              stacks[length][new_state].logprob < logprob:  # recombination
-            stacks[length][new_state] = new_hypothesis
-
+          new_hypothesis = hypothesis(logprob, next_state, h, phrase)
+          if next_state not in stacks[length] or stacks[length][next_state].logprob < logprob: # second case is recombination
+            stacks[length][next_state] = new_hypothesis 
   winner = max(stacks[len(f)].itervalues(), key=lambda h: h.logprob)
-
   def extract_english(h): 
     return "" if h.predecessor is None else "%s%s " % (extract_english(h.predecessor), h.phrase.english)
-
+		
   print extract_english(winner)
 
   if opts.verbose:
