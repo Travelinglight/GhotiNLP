@@ -89,7 +89,7 @@ for f in french:
         # tm_phrases = TM entries corresponding to fphrase f[f_range]
         length = i + f_range[1] - f_range[0]
         coverage = h.coverage | delta_coverage
-        distance = f_range[0] - h.last_frange[0]
+        distance = f_range[0] - h.last_frange[1]
 
         # TM might give us multiple candidates for a fphrase.
         for phrase in tm_phrases:
