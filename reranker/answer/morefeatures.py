@@ -102,30 +102,30 @@ def get_IBMM1_score(t_fe, f, e):
 
 # initialization
 print >> sys.stderr, "Initializing"
-
-# loading data
-fre = [line.strip().split() for line in open(opts.source)]
-ref = [line.strip().split() for line in open(opts.reference)]
-bitext = zip(fre, ref)
-
-print >> sys.stderr, "Calculating IMB Model 1 coefficients t_fe..."
-t_fe = calculate_t(zip(fre, ref))
-
-bleu_dump = opts.nbest[:opts.nbest.rfind('.nbest')] + '.bleu'
+bleu_dump = opts.nbest + '.morefeatures.feats'
 candidate = namedtuple("candidate", "sentence, features, bleu, smoothed_bleu")
 if os.path.isfile(bleu_dump):
-    sys.stderr.write("Loading bleu scores from %s... " % bleu_dump)
+    sys.stderr.write("Loading features from %s... " % bleu_dump)
     with open(bleu_dump, 'rb') as f:
         nbests = pickle.load(f)
     sys.stderr.write("Done.\n")
 else:
+    fre = [line.strip().split() for line in open(opts.source)]
     ref = [line.strip().split() for line in open(opts.reference)]
+    print >> sys.stderr, "Calculating IMB Model 1 coefficients t_fe..."
+    t_fe = calculate_t(zip(fre, ref))
+    print >> sys.stderr, "Calculating all features..."
     nbests = []
     for n, line in enumerate(open(opts.nbest)):
         (i, sentence, features) = line.strip().split("|||")
         i = int(i)
         sentence = sentence.strip()
-        features = np.array([float(h) for h in features.strip().split()])
+        words = sentence.split()
+        features = [float(h) for h in features.strip().split()]
+        more_features = [
+            len(words),
+        ] + list(get_IBMM1_score(t_fe, fre[i], words))
+        features = np.array(features + more_features)
 
         # calculate bleu score and smoothed bleu score
         stats = tuple(bleu.bleu_stats(sentence.split(), ref[i]))
@@ -142,6 +142,8 @@ else:
     with open(bleu_dump, 'wb') as f:
         pickle.dump(nbests, f)
     sys.stderr.write("Done.\n")
+
+print nbests[0][0]
 
 # set weights to default
 w = np.array([1.0/len(nbests[0][0][1]) for k in range(len(nbests[0][0][1]))])
@@ -174,9 +176,6 @@ for i in range(opts.epochs):
 
     print >> sys.stderr, "Number of mistakes: %d" % mistakes
     w += delta
-
-print("\n".join([str(weight) for weight in w]))
-
 
 # testing
 fre = [line.strip().split() for line in open(opts.testsource)]

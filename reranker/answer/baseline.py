@@ -24,10 +24,10 @@ optparser.add_option("-e", "--epochs", dest="epochs", default=5, help="number of
 
 # initialization
 print >> sys.stderr, "Initializing training data"
-bleu_dump = opts.nbest[:opts.nbest.rfind('.nbest')] + '.bleu'
+bleu_dump = opts.nbest + '.baseline.feats'
 candidate = namedtuple("candidate", "sentence, features, bleu, smoothed_bleu")
 if os.path.isfile(bleu_dump):
-    sys.stderr.write("Loading bleu scores from %s... " % bleu_dump)
+    sys.stderr.write("Loading features from %s... " % bleu_dump)
     with open(bleu_dump, 'rb') as f:
         nbests = pickle.load(f)
     sys.stderr.write("Done.\n")
@@ -51,7 +51,7 @@ else:
 
         if n % 2000 == 0:
             sys.stderr.write(".")
-    sys.stderr.write("\nSaving bleu scores to %s... " % bleu_dump)
+    sys.stderr.write("\nSaving features to %s... " % bleu_dump)
     with open(bleu_dump, 'wb') as f:
         pickle.dump(nbests, f)
     sys.stderr.write("Done.\n")
