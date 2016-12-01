@@ -14,11 +14,11 @@ import bleu
 optparser = optparse.OptionParser()
 optparser.add_option("-n", "--nbest", dest="nbest", default=os.path.join("data", "train.nbest"), help="N-best file")
 optparser.add_option("-r", "--reference", dest="reference", default=os.path.join("data", "train.en"), help="English reference sentences")
-optparser.add_option("-t", "--tau", dest="tau", default=5000, help="samples generated from n-best list per input sentence")
-optparser.add_option("-a", "--alpha", dest="alpha", default=0.1, help="sampler acceptance cutoff")
-optparser.add_option("-x", "--xi", dest="xi", default=100, help="training data generated from the samples tau")
-optparser.add_option("-s", "--step", dest="eta", default=0.1, help="perceptron learning rate")
-optparser.add_option("-e", "--epochs", dest="epochs", default=5, help="number of epochs for perceptron training")
+optparser.add_option("-t", "--tau", dest="tau", default=10000, type="int", help="samples generated from n-best list per input sentence")
+optparser.add_option("-a", "--alpha", dest="alpha", default=0.1, type="float", help="sampler acceptance cutoff")
+optparser.add_option("-x", "--xi", dest="xi", default=1000, type="int", help="training data generated from the samples tau")
+optparser.add_option("-s", "--step", dest="eta", default=0.1, type="float", help="perceptron learning rate")
+optparser.add_option("-e", "--epochs", dest="epochs", default=5, type="int", help="number of epochs for perceptron training")
 (opts, _) = optparser.parse_args()
 
 
@@ -58,12 +58,12 @@ else:
 
 # set weights to default
 w = np.array([1.0/len(nbests[0][0].features)] * len(nbests[0][0].features))
+total_w = np.zeros(len(nbests[0][0].features))
 
 # training
 random.seed()
 for i in range(opts.epochs):
     print >> sys.stderr, "Training epoch %d:" % i
-    delta = np.zeros(len(w))
     mistakes = 0
     for nbest in nbests:
         if len(nbest) < 2:
@@ -80,12 +80,14 @@ for i in range(opts.epochs):
             else:
                 continue
 
-        for (s1, s2) in sorted(sample, key=lambda s: s[0].smoothed_bleu - s[1].smoothed_bleu)[:opts.xi]:
+        sample.sort(key=lambda s: s[0].smoothed_bleu - s[1].smoothed_bleu, reverse=True)
+        for (s1, s2) in sample[:opts.xi]:
             if np.dot(w, s1.features) <= np.dot(w, s2.features):
                 mistakes += 1
-                delta += opts.eta * (s1.features - s2.features)  # this is vector addition!
+                w += opts.eta * (s1.features - s2.features)  # this is vector addition!
 
+    total_w += w
     print >> sys.stderr, "Number of mistakes: %d" % mistakes
-    w += delta
 
+w = total_w / float(opts.epochs)
 print("\n".join([str(weight) for weight in w]))

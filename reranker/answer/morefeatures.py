@@ -15,9 +15,9 @@ optparser = optparse.OptionParser()
 optparser.add_option("-n", "--nbest", dest="nbest", default=os.path.join("data", "train.nbest"), help="N-best file")
 optparser.add_option("-r", "--reference", dest="reference", default=os.path.join("data", "train.en"), help="English reference sentences")
 optparser.add_option("-f", "--source", dest="source", default=os.path.join("data", "train.fr"), help="French source sentences")
-optparser.add_option("-t", "--tau", dest="tau", default=5000, type="int", help="samples generated from n-best list per input sentence")
+optparser.add_option("-t", "--tau", dest="tau", default=10000, type="int", help="samples generated from n-best list per input sentence")
 optparser.add_option("-a", "--alpha", dest="alpha", default=0.1, type="float", help="sampler acceptance cutoff")
-optparser.add_option("-x", "--xi", dest="xi", default=100, type="int", help="training data generated from the samples tau")
+optparser.add_option("-x", "--xi", dest="xi", default=1000, type="int", help="training data generated from the samples tau")
 optparser.add_option("-s", "--step", dest="eta", default=0.1, type="float", help="perceptron learning rate")
 optparser.add_option("-e", "--epochs", dest="epochs", default=5, type="int", help="number of epochs for perceptron training")
 optparser.add_option("-i", "--ibmepochs", dest="ibmepochs", default=5, type="int", help="number of epochs for IBM Model 1")
@@ -98,9 +98,9 @@ def get_more_features(t_fe, f, e):
             if t_fe[(f_i, e_j)] > 0.05:
                 translated = True
         score += log(s)
-        if not translated:
+        if not translated or f_i in e:
             untranslated += 1
-    return score, len(words), untranslated
+    return score, len(e), untranslated
 
 
 # initialization
@@ -153,7 +153,9 @@ else:
     sys.stderr.write("Done.\n")
 
 # set weights to default
-w = np.array([1.0/len(nbests[0][0].features)] * len(nbests[0][0].features))
+#w = np.array([1.0/len(nbests[0][0].features)] * len(nbests[0][0].features))
+w = np.array([1.0] * len(nbests[0][0].features))
+total_w = np.zeros(len(nbests[0][0].features))
 
 # training
 random.seed()
@@ -182,8 +184,10 @@ for i in range(opts.epochs):
                 mistakes += 1
                 w += opts.eta * (s1.features - s2.features)  # this is vector addition!
 
+    total_w += w
     print >> sys.stderr, "Number of mistakes: %d" % mistakes
 
+w = total_w / float(opts.epochs)
 print("\n".join([str(weight) for weight in w]))
 
 # testing
