@@ -14,16 +14,18 @@ import bleu
 
 optparser = optparse.OptionParser()
 optparser.add_option("-n", "--nbest", dest="nbest", default=os.path.join("data", "train.nbest"), help="N-best file")
-optparser.add_option("-m", "--testnbest", dest="testnbest", default=os.path.join("data", "test.nbest"), help="test N-best file")
 optparser.add_option("-r", "--reference", dest="reference", default=os.path.join("data", "train.en"), help="English reference sentences")
-optparser.add_option("-f", "--source", dest="source", default=os.path.join("data", "train.fr"), help="English reference sentences")
-optparser.add_option("-g", "--testsource", dest="testsource", default=os.path.join("data", "test.fr"), help="test English reference sentences")
+optparser.add_option("-f", "--source", dest="source", default=os.path.join("data", "train.fr"), help="French source sentences")
 optparser.add_option("-t", "--tau", dest="tau", default=5000, help="samples generated from n-best list per input sentence")
 optparser.add_option("-a", "--alpha", dest="alpha", default=0.1, help="sampler acceptance cutoff")
 optparser.add_option("-x", "--xi", dest="xi", default=100, help="training data generated from the samples tau")
 optparser.add_option("-s", "--step", dest="eta", default=0.1, help="perceptron learning rate")
 optparser.add_option("-e", "--epochs", dest="epochs", default=5, help="number of epochs for perceptron training")
 optparser.add_option("-i", "--ibmepochs", dest="ibmepochs", default=5, help="number of epochs for IBM Model 1")
+# THESE TWO TEST DATA ARE ONLY FOR RERANKING NOT TRAINING!
+optparser.add_option("--testnbest", dest="testnbest", default=os.path.join("data", "test.nbest"), help="test N-best file")
+optparser.add_option("--testsource", dest="testsource", default=os.path.join("data", "test.fr"), help="test French source sentences")
+optparser.add_option("--output", dest="output", default="output", help="test English output after reranking")
 (opts, _) = optparser.parse_args()
 
 
@@ -102,6 +104,12 @@ def get_IBMM1_score(t_fe, f, e):
 
 # initialization
 print >> sys.stderr, "Initializing"
+
+print >> sys.stderr, "Calculating IMB Model 1 coefficients t_fe..."
+fre = [line.strip().split() for line in open(opts.source)]
+ref = [line.strip().split() for line in open(opts.reference)]
+t_fe = calculate_t(zip(fre, ref))
+
 bleu_dump = opts.nbest + '.morefeatures.feats'
 candidate = namedtuple("candidate", "sentence, features, bleu, smoothed_bleu")
 if os.path.isfile(bleu_dump):
@@ -110,10 +118,6 @@ if os.path.isfile(bleu_dump):
         nbests = pickle.load(f)
     sys.stderr.write("Done.\n")
 else:
-    fre = [line.strip().split() for line in open(opts.source)]
-    ref = [line.strip().split() for line in open(opts.reference)]
-    print >> sys.stderr, "Calculating IMB Model 1 coefficients t_fe..."
-    t_fe = calculate_t(zip(fre, ref))
     print >> sys.stderr, "Calculating all features..."
     nbests = []
     for n, line in enumerate(open(opts.nbest)):
@@ -143,10 +147,8 @@ else:
         pickle.dump(nbests, f)
     sys.stderr.write("Done.\n")
 
-print nbests[0][0]
-
 # set weights to default
-w = np.array([1.0/len(nbests[0][0][1]) for k in range(len(nbests[0][0][1]))])
+w = np.array([1.0/len(nbests[0][0].features)] * len(nbests[0][0].features))
 
 # training
 random.seed()
@@ -177,27 +179,31 @@ for i in range(opts.epochs):
     print >> sys.stderr, "Number of mistakes: %d" % mistakes
     w += delta
 
+print("\n".join([str(weight) for weight in w]))
+
 # testing
+sys.stderr.write("Reranking test N-best based on learned weights... ")
 fre = [line.strip().split() for line in open(opts.testsource)]
 translation = namedtuple("translation", "english, score")
 nbests = []
-for line in open(opts.testnbest):
+for n, line in enumerate(open(opts.testnbest)):
     (i, sentence, features) = line.strip().split("|||")
-    if len(nbests) <= int(i):
-        nbests.append([])
-    features = [float(h) for h in features.strip().split()]
     i = int(i)
+    sentence = sentence.strip()
+    words = sentence.split()
+    features = [float(h) for h in features.strip().split()]
+    more_features = [
+        len(sentence.strip().split()),
+    ] + list(get_IBMM1_score(t_fe, fre[i], words))
+    features = np.array(features + more_features)
 
-    # add more features
-    more_feature1 = len(sentence.strip().split())
-    #more_feature2 = len(fre[i]) - len(sentence.strip().split())
-    #more_feature2 = 0 if more_feature2 < 0 else more_feature2
-    more_feature3, more_feature2 = get_IBMM1_score(t_fe, fre[i], sentence.strip().split())
-    features = np.append(features, [more_feature2, more_feature3])
+    while len(nbests) <= i:
+        nbests.append([])
 
-    if w is None or len(w) != len(features):
-        w = [1.0/len(features) for _ in xrange(len(features))]
-    nbests[int(i)].append(translation(sentence.strip(), sum([x*y for x,y in zip(w, features)])))
+    nbests[i].append(translation(sentence, np.dot(w, features)))
 
-for nbest in nbests:
-    print sorted(nbest, key=lambda x: -x.score)[0].english
+with open(opts.output, 'w') as f:
+    for nbest in nbests:
+        f.write(max(nbest, key=lambda x: x.score).english + "\n")
+
+sys.stderr.write("Done.\n")
