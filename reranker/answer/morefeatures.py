@@ -176,7 +176,9 @@ for i in range(opts.epochs):
             else:
                 continue
 
-        for (s1, s2) in sorted(sample, key=lambda s: s[0].smoothed_bleu - s[1].smoothed_bleu)[:opts.xi]:
+        # s[0].bleu - s[1].bleu >= 0; and we want the top (most significant) values.
+        sample.sort(key=lambda s: s[0].smoothed_bleu - s[1].smoothed_bleu, reverse=True)
+        for (s1, s2) in sample[:opts.xi]:
             if np.dot(w, s1.features) <= np.dot(w, s2.features):
                 mistakes += 1
                 delta += opts.eta * (s1.features - s2.features)  # this is vector addition!
