@@ -1,11 +1,16 @@
 #!/usr/bin/env python
 import optparse, sys, os
-import bleu
 import random
+import pickle
 import numpy as np
 from collections import namedtuple
 from collections import defaultdict
 from math import fabs
+
+# Add the parent directory into search paths so that we can import perc
+sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
+import bleu
+
 
 optparser = optparse.OptionParser()
 optparser.add_option("-n", "--nbest", dest="nbest", default=os.path.join("data", "train.nbest"), help="N-best file")
@@ -21,10 +26,6 @@ optparser.add_option("-e", "--epochs", dest="epochs", default=5, help="number of
 optparser.add_option("-i", "--ibmepochs", dest="ibmepochs", default=5, help="number of epochs for IBM Model 1")
 (opts, _) = optparser.parse_args()
 
-# loading data
-fre = [line.strip().split() for line in open(opts.source)]
-ref = [line.strip().split() for line in open(opts.reference)]
-bitext = zip(fre, ref)
 
 # a magic string that never appears in the text
 null_word = '__NULL__'
@@ -100,51 +101,63 @@ def get_IBMM1_score(t_fe, f, e):
 
 
 # initialization
-print >> sys.stderr, "Initializing..."
+print >> sys.stderr, "Initializing"
 
-print >> sys.stderr, "Calculating IMB Model 1 Coefficients t_fe..."
+# loading data
+fre = [line.strip().split() for line in open(opts.source)]
+ref = [line.strip().split() for line in open(opts.reference)]
+bitext = zip(fre, ref)
+
+print >> sys.stderr, "Calculating IMB Model 1 coefficients t_fe..."
 t_fe = calculate_t(zip(fre, ref))
 
-print >> sys.stderr, "Preparing for baseline training"
-nbests = []
+bleu_dump = opts.nbest[:opts.nbest.rfind('.nbest')] + '.bleu'
 candidate = namedtuple("candidate", "sentence, features, bleu, smoothed_bleu")
-for line in open(opts.nbest):
-    (i, sentence, features) = line.strip().split("|||")
-    features = np.array([float(h) for h in features.strip().split()])
-    i = int(i)
+if os.path.isfile(bleu_dump):
+    sys.stderr.write("Loading bleu scores from %s... " % bleu_dump)
+    with open(bleu_dump, 'rb') as f:
+        nbests = pickle.load(f)
+    sys.stderr.write("Done.\n")
+else:
+    ref = [line.strip().split() for line in open(opts.reference)]
+    nbests = []
+    for n, line in enumerate(open(opts.nbest)):
+        (i, sentence, features) = line.strip().split("|||")
+        i = int(i)
+        sentence = sentence.strip()
+        features = np.array([float(h) for h in features.strip().split()])
 
-    # add more features
-    more_feature1 = len(sentence.strip().split())
-    #more_feature2 = len(fre[i]) - len(sentence.strip().split())
-    # more_feature2 = 0 if more_feature2 < 0 else more_feature2
-    more_feature3, more_feature2 = get_IBMM1_score(t_fe, fre[i], sentence.strip().split())
-    features = np.append(features, [more_feature2, more_feature3])
+        # calculate bleu score and smoothed bleu score
+        stats = tuple(bleu.bleu_stats(sentence.split(), ref[i]))
+        bleu_score = bleu.bleu(stats)
+        smoothed_bleu_score = bleu.smoothed_bleu(stats)
 
-    # calculate bleu score and smoothed bleu score
-    stats = [0 for k in range(10)]
-    stats = [sum(scores) for scores in zip(stats, bleu.bleu_stats(sentence.strip().split(), ref[i]))]
-    bleu_score = bleu.bleu(stats)
-    smoothed_bleu_score = bleu.smoothed_bleu(stats)
+        while len(nbests) <= i:
+            nbests.append([])
+        nbests[i].append(candidate(sentence, features, bleu_score, smoothed_bleu_score))
 
-    if i >= len(nbests):
-        nbests.append([])
-
-    nbests[i].append(candidate(sentence, features, bleu_score, smoothed_bleu_score))
+        if n % 2000 == 0:
+            sys.stderr.write(".")
+    sys.stderr.write("\nSaving bleu scores to %s... " % bleu_dump)
+    with open(bleu_dump, 'wb') as f:
+        pickle.dump(nbests, f)
+    sys.stderr.write("Done.\n")
 
 # set weights to default
 w = np.array([1.0/len(nbests[0][0][1]) for k in range(len(nbests[0][0][1]))])
 
 # training
+random.seed()
 for i in range(opts.epochs):
-    print >> sys.stderr, "Training: epoch[%d]:" % i
+    print >> sys.stderr, "Training epoch %d:" % i
     delta = np.array([0.0 for k in range(len(w))])
     mistakes = 0
     for nbest in nbests:
-        sample = []
-        for j in range(opts.tau):
-            if len(nbest) < 2:
-                break
+        if len(nbest) < 2:
+            continue
 
+        sample = []
+        for j in xrange(opts.tau):
             (s1, s2) = (nbest[k] for k in random.sample(range(len(nbest)), 2))
             if fabs(s1.smoothed_bleu - s2.smoothed_bleu) > opts.alpha:
                 if s1.smoothed_bleu > s2.smoothed_bleu:
@@ -159,13 +172,10 @@ for i in range(opts.epochs):
                 mistakes += 1
                 delta += opts.eta * (s1.features - s2.features)  # this is vector addition!
 
-    print >> sys.stderr, "Number of mistakes: [%d]:" % mistakes
+    print >> sys.stderr, "Number of mistakes: %d" % mistakes
     w += delta
 
-
-print >> sys.stderr, "Weights:"
-for i, weight in enumerate(w):
-    print >> sys.stderr, "%d" % weight
+print("\n".join([str(weight) for weight in w]))
 
 
 # testing
