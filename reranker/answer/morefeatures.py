@@ -3,9 +3,8 @@ import optparse, sys, os
 import random
 import pickle
 import numpy as np
-from collections import namedtuple
-from collections import defaultdict
-from math import fabs
+from collections import namedtuple, defaultdict
+from math import fabs, log
 
 # Add the parent directory into search paths so that we can import perc
 sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
@@ -22,6 +21,7 @@ optparser.add_option("-x", "--xi", dest="xi", default=100, help="training data g
 optparser.add_option("-s", "--step", dest="eta", default=0.1, help="perceptron learning rate")
 optparser.add_option("-e", "--epochs", dest="epochs", default=5, help="number of epochs for perceptron training")
 optparser.add_option("-i", "--ibmepochs", dest="ibmepochs", default=5, help="number of epochs for IBM Model 1")
+optparser.add_option("--ibmmodel", dest="t_fe", default=os.path.join("data", "t_fe.pickle"), help="saved t_fe (IBM Model 1)")
 # THESE TWO TEST DATA ARE ONLY FOR RERANKING NOT TRAINING!
 optparser.add_option("--testnbest", dest="testnbest", default=os.path.join("data", "test.nbest"), help="test N-best file")
 optparser.add_option("--testsource", dest="testsource", default=os.path.join("data", "test.fr"), help="test French source sentences")
@@ -86,29 +86,36 @@ def calculate_t(bitext):
     return t_fe
 
 
-# get IBM Model 1 score along with untranslated words
-def get_IBMM1_score(t_fe, f, e):
+# get IBM Model 1 score along with other features
+def get_more_features(t_fe, f, e):
     untranslated = 0
-    score = 0.0
+    score = 0
     for i, f_i in enumerate(f):
         translated = False
+        s = 1e-50
         for j, e_j in enumerate(e):
-            score += t_fe[(f_i, e_j)]
+            s += t_fe[(f_i, e_j)]
             if t_fe[(f_i, e_j)] > 0.05:
                 translated = True
+        score += log(s)
         if not translated:
             untranslated += 1
-
-    return score, untranslated
+    return score, len(words), untranslated
 
 
 # initialization
 print >> sys.stderr, "Initializing"
-
-print >> sys.stderr, "Calculating IMB Model 1 coefficients t_fe..."
 fre = [line.strip().split() for line in open(opts.source)]
 ref = [line.strip().split() for line in open(opts.reference)]
-t_fe = calculate_t(zip(fre, ref))
+
+if os.path.isfile(opts.t_fe):
+    sys.stderr.write("Loading IBM Model 1 from %s... " % opts.t_fe)
+    with open(opts.t_fe, 'rb') as f:
+        t_fe = pickle.load(f)
+    sys.stderr.write("Done.\n")
+else:
+    print >> sys.stderr, "Calculating IMB Model 1 t_fe from training data..."
+    t_fe = calculate_t(zip(fre, ref))
 
 bleu_dump = opts.nbest + '.morefeatures.feats'
 candidate = namedtuple("candidate", "sentence, features, bleu, smoothed_bleu")
@@ -126,9 +133,7 @@ else:
         sentence = sentence.strip()
         words = sentence.split()
         features = [float(h) for h in features.strip().split()]
-        more_features = [
-            len(words),
-        ] + list(get_IBMM1_score(t_fe, fre[i], words))
+        more_features = list(get_more_features(t_fe, fre[i], words))
         features = np.array(features + more_features)
 
         # calculate bleu score and smoothed bleu score
@@ -142,7 +147,7 @@ else:
 
         if n % 2000 == 0:
             sys.stderr.write(".")
-    sys.stderr.write("\nSaving bleu scores to %s... " % bleu_dump)
+    sys.stderr.write("\nSaving features to %s... " % bleu_dump)
     with open(bleu_dump, 'wb') as f:
         pickle.dump(nbests, f)
     sys.stderr.write("Done.\n")
@@ -192,9 +197,7 @@ for n, line in enumerate(open(opts.testnbest)):
     sentence = sentence.strip()
     words = sentence.split()
     features = [float(h) for h in features.strip().split()]
-    more_features = [
-        len(sentence.strip().split()),
-    ] + list(get_IBMM1_score(t_fe, fre[i], words))
+    more_features = list(get_more_features(t_fe, fre[i], words))
     features = np.array(features + more_features)
 
     while len(nbests) <= i:
