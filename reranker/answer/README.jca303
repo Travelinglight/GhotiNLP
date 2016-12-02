@@ -1,0 +1,21 @@
+Kingston Chen, jca303@sfu.ca
+
+## My contribution to the homework solution
+
+1. Implemented baseline algorithm and fixed a bug in the pseudocode, got score 25.18
+2. Added 2 features: IBM Model 1 score and number of untranslated words. 
+3. Improved the method of counting untranslated words, and got a test score of 25.37 for more_features.py
+
+
+## My formal commit to the group repository
+commit b6f0c75a9ccccbb1488c2ac5d3b39666e42788bf
+Author: Jingda Chen <holaelmundokingston@gmail.com>
+Date:   Tue Nov 29 03:26:11 2016 -0800
+
+    more features used: untranslated words and IBM model 1 score, reach test score 25.36
+
+commit a5a934d46ab46d2605c8cd40f8b530bc7ed43225
+Author: Jingda Chen <holaelmundokingston@gmail.com>
+Date:   Thu Nov 24 16:08:21 2016 -0800
+
+    baseline implemented, test score 25.18
