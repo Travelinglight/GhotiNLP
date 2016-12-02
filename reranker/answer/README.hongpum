@@ -1,0 +1,80 @@
+Hongpu Ma, hongpum@sfu.ca
+
+## My contribution to the homework solution
+
+1. Minor performance tweaks and bug fixes.
+2. Added the support of dumping and loading features and bleu scores to save
+   time when tweaking parameters.
+3. Used the IBM Model 1 trained from the alignment assignment.
+4. Added averaged perceptron.
+5. Seeded the Random Number Generator, tweaked parameters.
+6. Wrote the overall README.
+
+## My git commits to the group repository
+
+commit b48e7eda523f67da05d7a830d2c8284535983523
+Author: Robert Ma (Hexcles) <bob1211@gmail.com>
+Date:   Thu Dec 1 12:49:22 2016 -0800
+
+    Add README
+
+commit bd3b5b49417db164d60f7691d1d4b0aa353f7d40
+Author: Robert Ma (Hexcles) <bob1211@gmail.com>
+Date:   Thu Dec 1 12:35:50 2016 -0800
+
+    Rename
+
+commit 77d33935438624fdd5b93ec9b589114dd40f2ee0
+Author: Robert Ma (Hexcles) <bob1211@gmail.com>
+Date:   Thu Dec 1 12:33:37 2016 -0800
+
+    Use averaged perceptron and increase parameters
+    
+    Also apply changes to baseline.py
+
+commit c97d700a99e931cc6287dbd6127f98b4914b4f48
+Author: Robert Ma (Hexcles) <bob1211@gmail.com>
+Date:   Thu Dec 1 01:57:01 2016 -0800
+
+    Fix another bug in updating weights
+    
+    weights should be updated each time; no delta needed.
+
+commit 1f18a33706e9c9795c79b500383d92adeec722cb
+Author: Robert Ma (Hexcles) <bob1211@gmail.com>
+Date:   Thu Dec 1 01:24:08 2016 -0800
+
+    Fix a critical bug in PRO batch training
+    
+    Should sort decreasingly.
+
+commit e8e59814d3ab3c2da68b6043b55f22ae93a38526
+Author: Robert Ma (Hexcles) <bob1211@gmail.com>
+Date:   Thu Dec 1 01:22:20 2016 -0800
+
+    Load IBM Model 1 from aligner assignment
+    
+    And use its log scale.
+
+commit 22d8d392b55ddcc42e11479ea7f09b45ccd6014f
+Author: Robert Ma (Hexcles) <bob1211@gmail.com>
+Date:   Wed Nov 30 23:28:09 2016 -0800
+
+    Fix embedded reranker in morefeatures
+
+commit 167e62b49f1c301d5bf6d7387376c83240532019
+Author: Robert Ma (Hexcles) <bob1211@gmail.com>
+Date:   Wed Nov 30 22:25:36 2016 -0800
+
+    Fix morefeatures
+
+commit 5a7a01246ece9011385c006de34068d7eda8170d
+Author: Robert Ma (Hexcles) <bob1211@gmail.com>
+Date:   Wed Nov 30 21:19:40 2016 -0800
+
+    Improve training speed
+    
+    * Use pickle to store bleu stores of candidates
+    * Minor speedups
+    * Improve log messages
+    * Seed RNG
