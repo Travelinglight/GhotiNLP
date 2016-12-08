@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # Simple translation model and language model data structures
 import sys
+import gzip
 from collections import namedtuple
 
 # A translation model is a dictionary where keys are tuples of French words
@@ -37,7 +38,11 @@ class LM:
   def __init__(self, filename):
     sys.stderr.write("Reading language model from %s...\n" % (filename,))
     self.table = {}
-    for line in open(filename):
+    if filename.endswith('.gz'):
+      f = gzip.open(filename)
+    else:
+      f = open(filename)
+    for line in f:
       entry = line.strip().split("\t")
       if len(entry) > 1 and entry[0] != "ngram":
         (logprob, ngram, backoff) = (float(entry[0]), tuple(entry[1].split()), float(entry[2] if len(entry)==3 else 0.0))
