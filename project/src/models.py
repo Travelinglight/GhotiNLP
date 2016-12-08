@@ -16,7 +16,7 @@ def TM(filename, k):
   tm = {}
   for line in open(filename).readlines():
     (f, e, logprob) = line.strip().split(" ||| ")
-    tm.setdefault(tuple(f.split()), []).append(phrase(e, float(logprob)))
+    tm.setdefault(tuple(f.split()), []).append(phrase(e, float(logprob.strip().split()[0])))
   for f in tm: # prune all but top k translations
     tm[f].sort(key=lambda x: -x.logprob)
     del tm[f][k:] 
@@ -41,6 +41,7 @@ class LM:
       entry = line.strip().split("\t")
       if len(entry) > 1 and entry[0] != "ngram":
         (logprob, ngram, backoff) = (float(entry[0]), tuple(entry[1].split()), float(entry[2] if len(entry)==3 else 0.0))
+
         self.table[ngram] = ngram_stats(logprob, backoff)
 
   def begin(self):
@@ -55,7 +56,8 @@ class LM:
       else: #backoff
         score += self.table[ngram[:-1]].backoff if len(ngram) > 1 else 0.0 
         ngram = ngram[1:]
-    return ((), score + self.table[("<unk>",)].logprob)
-    
+    # return ((), score + self.table[("<unk>",)].logprob)
+    return ((), score)
+
   def end(self, state):
     return self.score(state, "</s>")[1]
