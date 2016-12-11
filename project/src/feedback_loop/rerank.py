@@ -1,14 +1,8 @@
 #!/usr/bin/env python
-import optparse, sys, os, math
+import sys, os, math
 from collections import namedtuple
 
-optparser = optparse.OptionParser()
-optparser.add_option("-n", "--nbest", dest="nbest", default=os.path.join("data", "test.nbest"), help="N-best file")
-optparser.add_option("-w", "--weight-file", dest="weights", default=None, help="Weight filename, or - for stdin (default=use uniform weights)")
-(opts, _) = optparser.parse_args()
-
-
-def rerank(weights, nbestdir):
+def rerank(weights, nbestlist):
     w = None
     if weights is not None:
         weights_file = sys.stdin if weights is "-" else open(weights)
@@ -18,7 +12,7 @@ def rerank(weights, nbestdir):
 
     translation = namedtuple("translation", "english, score")
     nbests = []
-    for line in open(nbestdir):
+    for line in nbestlist:
         (i, sentence, features) = line.strip().split("|||")
         if len(nbests) <= int(i):
             nbests.append([])

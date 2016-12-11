@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-import optparse, sys, os
+import sys, os
 import random
 import pickle
 import numpy as np
@@ -11,55 +11,34 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 import bleu
 
 
-optparser = optparse.OptionParser()
-optparser.add_option("-n", "--nbest", dest="nbest", default=os.path.join("data", "train.nbest"), help="N-best file")
-optparser.add_option("-r", "--reference", dest="reference", default=os.path.join("data", "train.en"), help="English reference sentences")
-optparser.add_option("-t", "--tau", dest="tau", default=10000, type="int", help="samples generated from n-best list per input sentence")
-optparser.add_option("-a", "--alpha", dest="alpha", default=0.1, type="float", help="sampler acceptance cutoff")
-optparser.add_option("-x", "--xi", dest="xi", default=1000, type="int", help="training data generated from the samples tau")
-optparser.add_option("-s", "--step", dest="eta", default=0.1, type="float", help="perceptron learning rate")
-optparser.add_option("-e", "--epochs", dest="epochs", default=5, type="int", help="number of epochs for perceptron training")
-(opts, _) = optparser.parse_args()
-
-
-def reranker_train(nbestdir, refdir, epochs=5, alpha=0.1, tau=10000, xi=1000, eta=0.1):
+def reranker_train(nbest_candidates, refdir, epochs=5, alpha=0.04, tau=10000, xi=1000, eta=0.1):
     # initialization
     print >> sys.stderr, "Initializing training data"
-    bleu_dump = nbestdir + '.baseline.feats'
     candidate = namedtuple("candidate", "sentence, features, bleu, smoothed_bleu")
-    if os.path.isfile(bleu_dump):
-        sys.stderr.write("Loading features from %s... " % bleu_dump)
-        with open(bleu_dump, 'rb') as f:
-            nbests = pickle.load(f)
-        sys.stderr.write("Done.\n")
-    else:
-        ref = [line.strip().split() for line in open(refdir)]
-        nbests = []
-        for n, line in enumerate(open(nbestdir)):
-            (i, sentence, features) = line.strip().split("|||")
-            i = int(i)
-            sentence = sentence.strip()
-            features = np.array([float(h) for h in features.strip().split()])
+    ref = [line.strip().split() for line in open(refdir)]
+    nbests = []
+    for n, line in enumerate(nbest_candidates):
+        (i, sentence, features) = line.strip().split("|||")
+        i = int(i)
+        sentence = sentence.strip()
+        features = np.array([float(h) for h in features.strip().split()])
 
-            # calculate bleu score and smoothed bleu score
-            stats = tuple(bleu.bleu_stats(sentence.split(), ref[i]))
-            bleu_score = bleu.bleu(stats)
-            smoothed_bleu_score = bleu.smoothed_bleu(stats)
+        # calculate bleu score and smoothed bleu score
+        stats = tuple(bleu.bleu_stats(sentence.split(), ref[i]))
+        bleu_score = bleu.bleu(stats)
+        smoothed_bleu_score = bleu.smoothed_bleu(stats)
 
-            while len(nbests) <= i:
-                nbests.append([])
-            nbests[i].append(candidate(sentence, features, bleu_score, smoothed_bleu_score))
+        while len(nbests) <= i:
+            nbests.append([])
+        nbests[i].append(candidate(sentence, features, bleu_score, smoothed_bleu_score))
 
-            if n % 2000 == 0:
-                sys.stderr.write(".")
-        sys.stderr.write("\nSaving features to %s... " % bleu_dump)
-        with open(bleu_dump, 'wb') as f:
-            pickle.dump(nbests, f)
-        sys.stderr.write("Done.\n")
+        if n % 2000 == 0:
+            sys.stderr.write(".")
+    sys.stderr.write("Done.\n")
 
     # set weights to default
     w = np.array([1.0/len(nbests[0][0].features)] * len(nbests[0][0].features))
-    total_w = np.zeros(len(nbests[0][0].features))
+    weights = np.zeros(len(nbests[0][0].features))
 
     # training
     random.seed()
@@ -71,7 +50,7 @@ def reranker_train(nbestdir, refdir, epochs=5, alpha=0.1, tau=10000, xi=1000, et
                 continue
 
             sample = []
-            for j in xrange(tau):
+            for j in range(tau):
                 (s1, s2) = (nbest[k] for k in random.sample(range(len(nbest)), 2))
                 if fabs(s1.smoothed_bleu - s2.smoothed_bleu) > alpha:
                     if s1.smoothed_bleu > s2.smoothed_bleu:
@@ -87,8 +66,8 @@ def reranker_train(nbestdir, refdir, epochs=5, alpha=0.1, tau=10000, xi=1000, et
                     mistakes += 1
                     w += eta * (s1.features - s2.features)  # this is vector addition!
 
-        total_w += w
+        weights += w
         print >> sys.stderr, "Number of mistakes: %d" % mistakes
 
-    w = total_w / float(epochs)
+    w = weights / float(epochs)
     return w
