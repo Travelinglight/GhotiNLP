@@ -170,7 +170,7 @@ for f in french:
 
   winner = max(stacks[len(f)].itervalues(), key=lambda h: h.logprob)
 
-  def extract_english(h): 
+  def extract_english(h):
     return "" if h.predecessor is None else "%s%s " % (extract_english(h.predecessor), h.phrase.english)
 
   print extract_english(winner)

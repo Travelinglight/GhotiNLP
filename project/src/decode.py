@@ -14,9 +14,9 @@ import models
 alpha = 0.95  #reordering parameter
 
 optparser = optparse.OptionParser()
-optparser.add_option("-i", "--input", dest="input", default="data/toy/train.cn", help="File containing sentences to translate (default=data/input)")
-optparser.add_option("-t", "--translation-model", dest="tm", default="data/toy/phrase-table/phrase_table.out", help="File containing translation model (default=data/tm)")
-optparser.add_option("-l", "--language-model", dest="lm", default="data/lm/en.gigaword.3g.filtered.dev_test.arpa.gz", help="File containing ARPA-format language model (default=data/lm)")
+optparser.add_option("-i", "--input", dest="input", default="data/test/all.cn-en.cn", help="File containing sentences to translate (default=data/input)")
+optparser.add_option("-t", "--translation-model", dest="tm", default="data/large/phrase-table/test-filtered/rules_cnt.final.out", help="File containing translation model (default=data/tm)")
+optparser.add_option("-l", "--language-model", dest="lm", default="data/lm/en.gigaword.3g.filtered.train_dev_test.arpa.gz", help="File containing ARPA-format language model (default=data/lm)")
 optparser.add_option("-n", "--num_sentences", dest="num_sents", default=sys.maxint, type="int", help="Number of sentences to decode (default=no limit)")
 optparser.add_option("-k", "--translations-per-phrase", dest="k", default=1, type="int", help="Limit on number of translations to consider per phrase (default=1)")
 optparser.add_option("-s", "--stack-size", dest="s", default=1, type="int", help="Maximum stack size (default=1)")
