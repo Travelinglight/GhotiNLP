@@ -13,15 +13,16 @@ from collections import namedtuple
 # k is a pruning parameter: only the top k translations are kept for each f.
 phrase = namedtuple("phrase", "english, features")
 def TM(filename, k, weights):
-  sys.stderr.write("Reading translation model from %s...\n" % (filename,))
-  tm = {}
-  for line in open(filename).readlines():
-    (f, e, logprob) = line.strip().split(" ||| ")
-    tm.setdefault(tuple(f.split()), []).append(phrase(e, [float(logprob.strip().split()[i]) for i in range(4)]))
-  for f in tm: # prune all but top k translations
-    tm[f].sort(key=lambda x: sum(p * q for p, q in zip(x.features, weights)))
-    del tm[f][k:]
-  return tm
+    sys.stderr.write("Reading translation model from %s...\n" % (filename,))
+    tm = {}
+    for line in open(filename).readlines():
+        (f, e, logprob) = line.strip().split(" ||| ")
+        tm.setdefault(tuple(f.split()), []).append(phrase(e, [float(logprob.strip().split()[i]) for i in range(4)]))
+    for f in tm: # prune all but top k translations
+        tm[f].sort(key=lambda x: sum(p * q for p, q in zip(x.features, weights)))
+        del tm[f][k:]
+    return tm
+
 
 # # A language model scores sequences of English words, and must account
 # # for both beginning and end of each sequence. Example API usage:
@@ -35,34 +36,34 @@ def TM(filename, k, weights):
 # logprob += lm.end(lm_state) # transition to </s>, can also use lm.score(lm_state, "</s>")[1]
 ngram_stats = namedtuple("ngram_stats", "logprob, backoff")
 class LM:
-  def __init__(self, filename):
-    sys.stderr.write("Reading language model from %s...\n" % (filename,))
-    self.table = {}
-    if filename.endswith('.gz'):
-      f = gzip.open(filename)
-    else:
-      f = open(filename)
-    for line in f:
-      entry = line.strip().split("\t")
-      if len(entry) > 1 and entry[0] != "ngram":
-        (logprob, ngram, backoff) = (float(entry[0]), tuple(entry[1].split()), float(entry[2] if len(entry)==3 else 0.0))
+    def __init__(self, filename):
+        sys.stderr.write("Reading language model from %s...\n" % (filename,))
+        self.table = {}
+        if filename.endswith('.gz'):
+            f = gzip.open(filename)
+        else:
+            f = open(filename)
+        for line in f:
+            entry = line.strip().split("\t")
+            if len(entry) > 1 and entry[0] != "ngram":
+                (logprob, ngram, backoff) = (float(entry[0]), tuple(entry[1].split()), float(entry[2] if len(entry)==3 else 0.0))
 
-        self.table[ngram] = ngram_stats(logprob, backoff)
+                self.table[ngram] = ngram_stats(logprob, backoff)
 
-  def begin(self):
-    return ("<s>",)
+    def begin(self):
+        return ("<s>",)
 
-  def score(self, state, word):
-    ngram = state + (word,)
-    score = 0.0
-    while len(ngram)> 0:
-      if ngram in self.table:
-        return (ngram[-2:], score + self.table[ngram].logprob)
-      else: #backoff
-        score += self.table[ngram[:-1]].backoff if len(ngram) > 1 else 0.0 
-        ngram = ngram[1:]
-    # return ((), score + self.table[("<unk>",)].logprob)
-    return ((), score)
+    def score(self, state, word):
+        ngram = state + (word,)
+        score = 0.0
+        while len(ngram)> 0:
+            if ngram in self.table:
+                return (ngram[-2:], score + self.table[ngram].logprob)
+            else: #backoff
+                score += self.table[ngram[:-1]].backoff if len(ngram) > 1 else 0.0
+                ngram = ngram[1:]
+        # return ((), score + self.table[("<unk>",)].logprob)
+        return ((), score)
 
-  def end(self, state):
-    return self.score(state, "</s>")[1]
+    def end(self, state):
+        return self.score(state, "</s>")[1]

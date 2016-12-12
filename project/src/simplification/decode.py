@@ -4,6 +4,7 @@ import sys
 from collections import namedtuple 
 from math import log, sqrt
 from operator import add
+from mafan import simplify
 
 # Add the parent directory into search paths so that we can import perc
 sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
@@ -13,10 +14,14 @@ import models
 def get_candidates(input, tm, lm, weights, s=1):
 
     alpha = 0.95  #reordering parameter
-    french = [tuple(line.strip().split()) for line in open(input).readlines()]
+    french = [list(line.strip().split()) for line in open(input).readlines()]
+    for li, line in enumerate(french):
+        for wi, word in enumerate(line):
+            french[li][wi] = simplify(word.decode('utf-8')).encode('utf-8')
+
 
     # tm should translate unknown words as-is with probability 1
-    for word in set(sum(french,())):
+    for word in set(sum(french,[])):
         if (word,) not in tm:
             tm[(word,)] = [models.phrase(word, [0.0, 0.0, 0.0, 0.0])]
 
@@ -28,8 +33,8 @@ def get_candidates(input, tm, lm, weights, s=1):
             bitstring = 0
             for j in range(i+1, len(f)+1):
                 bitstring += 1 << (len(f) - j)
-                if f[i:j] in tm:
-                    entries.append({'end': j, 'bitstring': bitstring, 'phrase': tm[f[i:j]]})
+                if tuple(f[i:j]) in tm:
+                    entries.append({'end': j, 'bitstring': bitstring, 'phrase': tm[tuple(f[i:j])]})
             cache.append(entries)
         return cache
 
