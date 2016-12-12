@@ -11,7 +11,8 @@ import models
 
 
 # Parameter constants
-alpha = 0.95  #reordering parameter
+alpha = 0.5  # reordering parameter
+unknown_word_logprob = -100.0  # the logprob of unknown single words
 
 optparser = optparse.OptionParser()
 optparser.add_option("-d", "--dataset", dest="dataset", help="Data set to run on (override other paths): toy, dev, test")
@@ -29,7 +30,6 @@ optparser.add_option_group(hyperparam_opts)
 opts = optparser.parse_args()[0]
 opts.verbose = opts.verbose or opts.debug
 if opts.dataset == "toy":
-  #opts.input = "data/toy/train.cn"
   opts.input = "data/toy/train.cn"
   opts.lm = "data/lm/en.tiny.3g.arpa"
   opts.tm = "data/toy/phrase-table/phrase_table.out"
@@ -46,10 +46,11 @@ tm = models.TM(opts.tm, opts.k)
 lm = models.LM(opts.lm)
 french = [tuple(line.strip().split()) for line in open(opts.input).readlines()[:opts.num_sents]]
 
-# tm should translate unknown words as-is with probability 1
+# tm should translate unknown words as-is with a small probability
+# (i.e. only fallback to copying unknown words over as the last resort)
 for word in set(sum(french,())):
   if (word,) not in tm:
-    tm[(word,)] = [models.phrase(word, 0.0)]
+    tm[(word,)] = [models.phrase(word, unknown_word_logprob)]
 
 
 def generate_phrase_cache(f):
@@ -74,30 +75,23 @@ def enumerate_phrases(f_cache, coverage):
 
 
 def precalcuate_future_cost(f):
-  phraseCheapestTable = {}
-  futureCostTable = {}
-  for i in xrange(0,len(f)):
-    for j in xrange(i+1,len(f)+1):
+  table = {}  # table[i,j] := [i,j)
+  neginf = -float('inf')
+  for l in xrange(1, len(f)+1):  # 1 .. len(f)
+    for i in xrange(0, len(f)-l+1):  # 0 .. len(f)-l (s.t. i+j <= len(f))
+      j = i + l  # 1 .. j-1 (f[i:j])
       if f[i:j] in tm:
-        phraseCheapestTable[i,j] = -sys.maxint
-        for phrase in tm[f[i:j]]:
-          if phrase.logprob > phraseCheapestTable[i,j]:
-            phraseCheapestTable[i,j] = phrase.logprob
-  for i in xrange(0,len(f)):
-    futureCostTable[i,1] = phraseCheapestTable[i,i+1]
-    for j in xrange(2,len(f)+1-i):
-      if (i,i+j) in  phraseCheapestTable:
-        futureCostTable[i,j] = phraseCheapestTable[i,i+j]
+        maxph = max(tm[f[i:j]], key=lambda x: x.logprob)
+        table[i,j] = maxph.logprob
       else:
-        futureCostTable[i,j] = -sys.maxint
-      for k in xrange(1, j):
-        if(((i+k,i+j) in phraseCheapestTable) and (futureCostTable[i,j] < futureCostTable[i,k] + phraseCheapestTable[i+k,i+j])):
-          futureCostTable[i,j] = futureCostTable[i,k] + phraseCheapestTable[i+k,i+j]
-  return futureCostTable
+        table[i,j] = neginf
+      for k in xrange(1, l): # 1 .. l-1 (skipped when l=1)
+        table[i,j] = max(table[i,j], table[i,i+k] + table[i+k,j])
+  return table
 
 
-def get_future_list(bitstring):
-  bitList = bin(bitstring)[2:]
+def get_future_list(bitstring, length):
+  bitList = bin(bitstring)[2:].rjust(length, '0')
   futureList = []
   start = 0
   while True:
@@ -105,7 +99,7 @@ def get_future_list(bitstring):
     if pos == -1:
       break
     if pos > start:
-      futureList.append((start, pos - start))
+      futureList.append((start, pos))
     start = pos + 1
   return futureList
 
@@ -145,7 +139,9 @@ for f in french:
       print >> sys.stderr, "Stack[%d]:" % i
 
     # Top-k pruning
-    for h in sorted(stack.itervalues(),key=lambda h: -h.logprob-h.future_cost)[:opts.s]:
+    s_hypotheses = stack.values()
+    s_hypotheses.sort(key=lambda h: h.logprob + h.future_cost, reverse=True)
+    for h in s_hypotheses[:opts.s]:
       if opts.debug:
         print >> sys.stderr, h.logprob, h.lm_state, bin(h.coverage), unicode(' '.join(f[h.last_frange[0]:h.last_frange[1]]), 'utf8'), h.future_cost
 
@@ -170,7 +166,7 @@ for f in french:
           logprob += lm.end(lm_state) if length == len(f) else 0.0
 
           # Future cost.
-          future_list = get_future_list(delta_coverage)
+          future_list = get_future_list(coverage, len(f))
           future_cost = get_future_cost(future_list, future_cost_table)
 
           new_state = (lm_state, f_range, coverage)
