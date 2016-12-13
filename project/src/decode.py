@@ -21,7 +21,6 @@ optparser.add_option("-w", "--weights", dest="weights", help="File containing we
 optparser.add_option("-i", "--input", dest="input", default="data/test/all.cn-en.cn", help="File containing sentences to translate")
 optparser.add_option("-t", "--translation-model", dest="tm", default="data/large/phrase-table/test-filtered/rules_cnt.final.out", help="File containing phrase table (translation model)")
 optparser.add_option("-l", "--language-model", dest="lm", default="data/lm/en.gigaword.3g.filtered.train_dev_test.arpa.gz", help="File containing ARPA-format language model")
-optparser.add_option("-n", "--num_sentences", dest="num_sents", default=sys.maxint, type="int", help="Number of sentences to decode (default=no limit)")
 optparser.add_option("--nbest", dest="nbest", default=1, type="int", help="Number of best translation candidates to print; if larger than 1, will print indexes and scores as well (default=1)")
 optparser.add_option("-v", "--verbose", dest="verbose", action="store_true", default=False, help="Verbose mode (default=off)")
 hyperparam_opts = optparse.OptionGroup(optparser, "Hyperparameters")
@@ -30,7 +29,7 @@ hyperparam_opts.add_option("-s", "--stack-size", dest="s", default=100, type="in
 optparser.add_option_group(hyperparam_opts)
 
 
-def generate_phrase_cache(f):
+def generate_phrase_cache(f, tm):
   cache = []
   for i in xrange(0, len(f)):
     entries = []
@@ -51,7 +50,7 @@ def enumerate_phrases(f_cache, coverage):
         yield ((i, entry['end']), entry['bitstring'], entry['phrase'])
 
 
-def precalcuate_future_cost(f, PTweights):
+def precalcuate_future_cost(f, tm, PTweights):
   table = {}  # table[i,j] := [i,j)
   neginf = -float('inf')
   for l in xrange(1, len(f)+1):  # 1 .. len(f)
@@ -97,17 +96,28 @@ def extract_english(h):
     "%s%s " % (extract_english(h.predecessor), h.phrase.english)
 
 
-def get_candidates(french, tm, lm, weights, stack_size=10, nbest=None, verbose=False):
-  sys.stderr.write("Decoding %s...\n" % (opts.input,))
+def get_candidates(inputfile, tm, lm, weights, stack_size=10, nbest=None, verbose=False):
   if nbest is None:
     nbest = stack_size
+
+  print >> sys.stderr, "Decoding: " + inputfile
+  print >> sys.stderr, "Reading input..."
+  french = [tuple(line.strip().split()) for line in open(inputfile).readlines()]
+
+  # tm should translate unknown words as-is with a small probability
+  # (i.e. only fallback to copying unknown words over as the last resort)
+  for word in set(sum(french,())):
+    if (word,) not in tm:
+      tm[(word,)] = [models.phrase(word, [unknown_word_logprob] * number_of_features_PT)]
+
+  print >> sys.stderr, "Start decoding..."
   for n, f in enumerate(french):
-    if opts.verbose:
-      print >> sys.stderr, "Input: " + f
+    if verbose:
+      print >> sys.stderr, "Input: " + ' '.join(f)
     # Generate cache for phrase segmentations.
-    f_cache = generate_phrase_cache(f)
+    f_cache = generate_phrase_cache(f, tm)
     # Pre-calculate future cost table
-    future_cost_table = precalcuate_future_cost(f, weights[:number_of_features_PT])
+    future_cost_table = precalcuate_future_cost(f, tm, weights[:number_of_features_PT])
 
     # score = dot(features, weights)
     # features = sums of each log feature
@@ -129,15 +139,15 @@ def get_candidates(french, tm, lm, weights, stack_size=10, nbest=None, verbose=F
     stacks[0][(lm.begin(), None, 0)] = initial_hypothesis
 
     for i, stack in enumerate(stacks[:-1]):
-      if opts.verbose:
+      if verbose:
         print >> sys.stderr, "Stack[%d]:" % i
 
       # Top-k pruning
       s_hypotheses = sorted(
         stack.values(), key=lambda h: h.score + h.future_cost, reverse=True)
-      for h in s_hypotheses[:opts.s]:
+      for h in s_hypotheses[:stack_size]:
         if verbose:
-          print >> sys.stderr, h.score, h.lm_state, bin(h.coverage), unicode(' '.join(f[h.last_frange[0]:h.last_frange[1]]), 'utf8'), h.future_cost
+          print >> sys.stderr, h.score, h.lm_state, bin(h.coverage), ' '.join(f[h.last_frange[0]:h.last_frange[1]]), h.future_cost
 
         for (f_range, delta_coverage, tm_phrases) in enumerate_phrases(f_cache, h.coverage):
           # f_range = (i, j) of the enumerated next phrase to be translated
@@ -150,7 +160,7 @@ def get_candidates(french, tm, lm, weights, stack_size=10, nbest=None, verbose=F
           # TM might give us multiple candidates for a fphrase.
           for phrase in tm_phrases:
             # Features from phrase table
-            features =[h.features[fid]+phrase.features[fid] for fid in range(number_of_features_PT)]
+            features = [h.features[fid]+phrase.features[fid] for fid in range(number_of_features_PT)]
             # log_lmprob (N-gram)
             lm_state = h.lm_state
             loglm = 0.0
@@ -181,6 +191,7 @@ def get_candidates(french, tm, lm, weights, stack_size=10, nbest=None, verbose=F
       for s in winners[:nbest]:
         yield ("%d ||| %s |||" + " %f" * number_of_features) % \
           ((n, extract_english(s)) + tuple(s.features))
+  print >> sys.stderr, "Decoding completed"
 
 
 if __name__ == "__main__":
@@ -207,14 +218,7 @@ if __name__ == "__main__":
 
   tm = models.TM(opts.tm, opts.k, weights)
   lm = models.LM(opts.lm)
-  french = [tuple(line.strip().split()) for line in open(opts.input).readlines()[:opts.num_sents]]
 
-  # tm should translate unknown words as-is with a small probability
-  # (i.e. only fallback to copying unknown words over as the last resort)
-  for word in set(sum(french,())):
-    if (word,) not in tm:
-      tm[(word,)] = [models.phrase(word, [unknown_word_logprob] * number_of_features_PT)]
-
-  candidates = get_candidates(french, tm, lm, weights, stack_size=opts.s, nbest=opts.nbest, verbose=opts.verbose)
+  candidates = get_candidates(opts.input, tm, lm, weights, stack_size=opts.s, nbest=opts.nbest, verbose=opts.verbose)
   for i in candidates:
     print i

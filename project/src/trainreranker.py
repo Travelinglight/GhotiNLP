@@ -1,17 +1,14 @@
 #!/usr/bin/env python
-import sys, os
+import sys
 import random
-import pickle
 import numpy as np
 from collections import namedtuple
 from math import fabs
 
-# Add the parent directory into search paths so that we can import perc
-sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 import bleu
 
 
-def reranker_train(nbest_candidates, refdir, epochs=5, alpha=0.04, tau=10000, xi=1000, eta=0.1):
+def train(nbest_candidates, refdir, epochs=5, alpha=0.04, tau=10000, xi=1000, eta=0.1):
     # initialization
     print >> sys.stderr, "Initializing training data"
     candidate = namedtuple("candidate", "sentence, features, bleu, smoothed_bleu")
@@ -34,7 +31,7 @@ def reranker_train(nbest_candidates, refdir, epochs=5, alpha=0.04, tau=10000, xi
 
         if n % 2000 == 0:
             sys.stderr.write(".")
-    sys.stderr.write("Done.\n")
+    print >> sys.stderr, "Retrieved %d candidates for %d sentences" % (n, len(nbests))
 
     # set weights to default
     w = np.array([1.0/len(nbests[0][0].features)] * len(nbests[0][0].features))

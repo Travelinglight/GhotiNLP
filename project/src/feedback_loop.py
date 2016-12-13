@@ -1,8 +1,10 @@
+#!/usr/bin/env python
 import sys, optparse
+
 import models
 import decode
-import reranker_train
 import rerank
+import trainreranker
 import scorereranker
 
 optparser = optparse.OptionParser()
@@ -21,11 +23,11 @@ opts = optparser.parse_args()[0]
 
 lm = models.LM(opts.lm)
 
-weights = [1, 1, 1, 1, 1]
+weights = [1.0 / 6] * 6
 for i in range(opts.loop):
-    tm = models.TM(opts.tmdev, opts.k, weights[0:-1])
-    nbest_list = decode.get_candidates(opts.input, tm, lm, weights, s=opts.s)
-    weights = reranker_train.reranker_train(nbest_list, opts.reference)
+    tm = models.TM(opts.tmdev, opts.k, weights[:4])
+    nbest_list = decode.get_candidates(opts.input, tm, lm, weights, stack_size=opts.s, verbose=opts.verbose)
+    weights = trainreranker.train(nbest_list, opts.reference)
     print weights
     results = rerank.rerank(weights, nbest_list)
     print >> sys.stderr, "BLEU SCORE: %f:" % scorereranker.score(results, opts.reference)
@@ -33,6 +35,5 @@ for i in range(opts.loop):
 tm = models.TM(opts.tmtest, opts.k, weights[0:-1])
 nbest_list = decode.get_candidates(opts.eval, tm, lm, weights)
 results = rerank.rerank(weights, nbest_list)
-file = open("output1", "w")
-file.write("\n".join(results))
-file.close()
+with open("output1", "w") as f:
+    f.write("\n".join(results))
