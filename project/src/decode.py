@@ -2,7 +2,7 @@
 import optparse
 import os
 import sys
-from collections import namedtuple 
+from collections import namedtuple
 from math import log, sqrt
 
 # Add the parent directory into search paths so that we can import perc
@@ -11,26 +11,46 @@ import models
 
 
 # Parameter constants
-alpha = 0.95  #reordering parameter
+alpha = 0.5  # reordering parameter
+unknown_word_logprob = -100.0  # the logprob of unknown single words
 
 optparser = optparse.OptionParser()
-optparser.add_option("-i", "--input", dest="input", default="data/test/all.cn-en.cn", help="File containing sentences to translate (default=data/input)")
-optparser.add_option("-t", "--translation-model", dest="tm", default="data/large/phrase-table/test-filtered/rules_cnt.final.out", help="File containing translation model (default=data/tm)")
-optparser.add_option("-l", "--language-model", dest="lm", default="data/lm/en.gigaword.3g.filtered.train_dev_test.arpa.gz", help="File containing ARPA-format language model (default=data/lm)")
+optparser.add_option("-d", "--dataset", dest="dataset", help="Data set to run on (override other paths): toy, dev, test")
+optparser.add_option("-i", "--input", dest="input", default="data/test/all.cn-en.cn", help="File containing sentences to translate")
+optparser.add_option("-t", "--translation-model", dest="tm", default="data/large/phrase-table/test-filtered/rules_cnt.final.out", help="File containing phrase table (translation model)")
+optparser.add_option("-l", "--language-model", dest="lm", default="data/lm/en.gigaword.3g.filtered.train_dev_test.arpa.gz", help="File containing ARPA-format language model")
 optparser.add_option("-n", "--num_sentences", dest="num_sents", default=sys.maxint, type="int", help="Number of sentences to decode (default=no limit)")
-optparser.add_option("-k", "--translations-per-phrase", dest="k", default=1, type="int", help="Limit on number of translations to consider per phrase (default=1)")
-optparser.add_option("-s", "--stack-size", dest="s", default=1, type="int", help="Maximum stack size (default=1)")
-optparser.add_option("-v", "--verbose", dest="verbose", action="store_true", default=False,  help="Verbose mode (default=off)")
+optparser.add_option("-v", "--verbose", dest="verbose", action="store_true", default=False, help="Verbose mode (default=off)")
+optparser.add_option("--debug", dest="debug", action="store_true", default=False, help="Debug (more verbose) mode (default=off)")
+hyperparam_opts = optparse.OptionGroup(optparser, "Hyperparameters")
+hyperparam_opts.add_option("-k", "--translations-per-phrase", dest="k", default=3, type="int", help="Limit on number of translations to consider per phrase (default=3)")
+hyperparam_opts.add_option("-s", "--stack-size", dest="s", default=100, type="int", help="Maximum stack size (default=100)")
+optparser.add_option_group(hyperparam_opts)
+
 opts = optparser.parse_args()[0]
+opts.verbose = opts.verbose or opts.debug
+if opts.dataset == "toy":
+  opts.input = "data/toy/train.cn"
+  opts.lm = "data/lm/en.tiny.3g.arpa"
+  opts.tm = "data/toy/phrase-table/phrase_table.out"
+elif opts.dataset == "dev":
+  opts.input = "data/dev/all.cn-en.cn"
+  opts.lm = "data/lm/en.gigaword.3g.filtered.train_dev_test.arpa.gz"
+  opts.tm = "data/large/phrase-table/dev-filtered/rules_cnt.final.out"
+elif opts.dataset == "test":
+  opts.input = "data/test/all.cn-en.cn"
+  opts.lm = "data/lm/en.gigaword.3g.filtered.train_dev_test.arpa.gz"
+  opts.tm = "data/large/phrase-table/test-filtered/rules_cnt.final.out"
 
 tm = models.TM(opts.tm, opts.k)
 lm = models.LM(opts.lm)
 french = [tuple(line.strip().split()) for line in open(opts.input).readlines()[:opts.num_sents]]
 
-# tm should translate unknown words as-is with probability 1
+# tm should translate unknown words as-is with a small probability
+# (i.e. only fallback to copying unknown words over as the last resort)
 for word in set(sum(french,())):
   if (word,) not in tm:
-    tm[(word,)] = [models.phrase(word, 0.0)]
+    tm[(word,)] = [models.phrase(word, unknown_word_logprob)]
 
 
 def generate_phrase_cache(f):
@@ -55,47 +75,32 @@ def enumerate_phrases(f_cache, coverage):
 
 
 def precalcuate_future_cost(f):
-  phraseCheapestTable = {}
-  futureCostTable = {}
-  for i in xrange(0,len(f)):
-    for j in xrange(i+1,len(f)+1):
+  table = {}  # table[i,j] := [i,j)
+  neginf = -float('inf')
+  for l in xrange(1, len(f)+1):  # 1 .. len(f)
+    for i in xrange(0, len(f)-l+1):  # 0 .. len(f)-l (s.t. i+j <= len(f))
+      j = i + l  # 1 .. j-1 (f[i:j])
       if f[i:j] in tm:
-        phraseCheapestTable[i,j] = -sys.maxint
-        for phrase in tm[f[i:j]]:
-          if phrase.logprob > phraseCheapestTable[i,j]:
-            phraseCheapestTable[i,j] = phrase.logprob
-  for i in xrange(0,len(f)):
-    futureCostTable[i,1] = phraseCheapestTable[i,i+1]
-    for j in xrange(2,len(f)+1-i):
-      if (i,i+j) in  phraseCheapestTable:
-        futureCostTable[i,j] = phraseCheapestTable[i,i+j]
+        maxph = max(tm[f[i:j]], key=lambda x: x.logprob)
+        table[i,j] = maxph.logprob
       else:
-        futureCostTable[i,j] = -sys.maxint
-      for k in xrange(1, j):
-        if(((i+k,i+j) in phraseCheapestTable) and (futureCostTable[i,j] < futureCostTable[i,k] + phraseCheapestTable[i+k,i+j])):
-          futureCostTable[i,j] = futureCostTable[i,k] + phraseCheapestTable[i+k,i+j]
-  return futureCostTable
+        table[i,j] = neginf
+      for k in xrange(1, l): # 1 .. l-1 (skipped when l=1)
+        table[i,j] = max(table[i,j], table[i,i+k] + table[i+k,j])
+  return table
 
 
-def get_future_list(bitstring):
-  bitList = bin(bitstring)[2:]
+def get_future_list(bitstring, length):
+  bitList = bin(bitstring)[2:].rjust(length, '0')
   futureList = []
-  count = 0
-  index = 0
-  findZeroBit = False
-  for i in range(len(bitList)):
-    if bitList[i] == '0':
-      if not findZeroBit:
-        index = i
-      findZeroBit = True
-      count = count + 1
-    else:
-      if findZeroBit:
-        futureList.append((index, count))
-      findZeroBit = False
-      count = 0
-  if findZeroBit:
-    futureList.append((index, count))
+  start = 0
+  while True:
+    pos = bitList.find('1', start)
+    if pos == -1:
+      break
+    if pos > start:
+      futureList.append((start, pos))
+    start = pos + 1
   return futureList
 
 
@@ -130,12 +135,14 @@ for f in french:
   # lm_state affects LM; last_frange affects distortion; coverage affects available choices.
   stacks[0][(lm.begin(), None, 0)] = initial_hypothesis
   for i, stack in enumerate(stacks[:-1]):
-    if opts.verbose:
+    if opts.debug:
       print >> sys.stderr, "Stack[%d]:" % i
 
     # Top-k pruning
-    for h in sorted(stack.itervalues(),key=lambda h: -h.logprob-h.future_cost)[:opts.s]:
-      if opts.verbose:
+    s_hypotheses = stack.values()
+    s_hypotheses.sort(key=lambda h: h.logprob + h.future_cost, reverse=True)
+    for h in s_hypotheses[:opts.s]:
+      if opts.debug:
         print >> sys.stderr, h.logprob, h.lm_state, bin(h.coverage), unicode(' '.join(f[h.last_frange[0]:h.last_frange[1]]), 'utf8'), h.future_cost
 
       for (f_range, delta_coverage, tm_phrases) in enumerate_phrases(f_cache, h.coverage):
@@ -159,7 +166,7 @@ for f in french:
           logprob += lm.end(lm_state) if length == len(f) else 0.0
 
           # Future cost.
-          future_list = get_future_list(delta_coverage)
+          future_list = get_future_list(coverage, len(f))
           future_cost = get_future_cost(future_list, future_cost_table)
 
           new_state = (lm_state, f_range, coverage)
@@ -170,7 +177,7 @@ for f in french:
 
   winner = max(stacks[len(f)].itervalues(), key=lambda h: h.logprob)
 
-  def extract_english(h): 
+  def extract_english(h):
     return "" if h.predecessor is None else "%s%s " % (extract_english(h.predecessor), h.phrase.english)
 
   print extract_english(winner)
