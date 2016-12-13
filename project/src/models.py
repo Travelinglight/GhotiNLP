@@ -5,22 +5,23 @@ import gzip
 from collections import namedtuple
 
 # A translation model is a dictionary where keys are tuples of French words
-# and values are lists of (english, logprob) named tuples. For instance,
+# and values are lists of (english, features) named tuples. For instance,
 # the French phrase "que se est" has two translations, represented like so:
 # tm[('que', 'se', 'est')] = [
-#   phrase(english='what has', logprob=-0.301030009985), 
-#   phrase(english='what has been', logprob=-0.301030009985)]
+#   phrase(english='what has', features=[-0.301030009985, ...]), 
+#   phrase(english='what has been', features=[-0.301030009985, ...])]
 # k is a pruning parameter: only the top k translations are kept for each f.
-phrase = namedtuple("phrase", "english, logprob")
-def TM(filename, k):
+phrase = namedtuple("phrase", "english, features")
+def TM(filename, k, weights):
   sys.stderr.write("Reading translation model from %s...\n" % (filename,))
   tm = {}
   for line in open(filename).readlines():
-    (f, e, logprob) = line.strip().split(" ||| ")
-    tm.setdefault(tuple(f.split()), []).append(phrase(e, sum([float(logprob.strip().split()[i]) for i in range(4)])))
+    (f, e, features) = line.strip().split(" ||| ")
+    tm.setdefault(tuple(f.split()), []).append(
+      phrase(e, [float(i) for i in features.strip().split()]))
   for f in tm: # prune all but top k translations
-    tm[f].sort(key=lambda x: -x.logprob)
-    del tm[f][k:] 
+    tm[f].sort(key=lambda x: sum(p*q for p,q in zip(x.features, weights)), reverse=True)
+    del tm[f][k:]
   return tm
 
 # # A language model scores sequences of English words, and must account

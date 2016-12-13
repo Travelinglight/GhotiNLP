@@ -11,9 +11,13 @@ import models
 # Parameter constants
 alpha = 0.5  # reordering parameter
 unknown_word_logprob = -100.0  # the logprob of unknown single words
+# Features: 0 phi(f|e), 1 lex(f|e), 2 phi(e|f), 3 lex(e|f), 4 lm, 5 distortion
+number_of_features_PT = 4  # in phrase table
+number_of_features = number_of_features_PT + 2
 
 optparser = optparse.OptionParser()
 optparser.add_option("-d", "--dataset", dest="dataset", help="Data set to run on (override other paths): toy, dev, test")
+optparser.add_option("-w", "--weights", dest="weights", help="File containing weights for log-linear models")
 optparser.add_option("-i", "--input", dest="input", default="data/test/all.cn-en.cn", help="File containing sentences to translate")
 optparser.add_option("-t", "--translation-model", dest="tm", default="data/large/phrase-table/test-filtered/rules_cnt.final.out", help="File containing phrase table (translation model)")
 optparser.add_option("-l", "--language-model", dest="lm", default="data/lm/en.gigaword.3g.filtered.train_dev_test.arpa.gz", help="File containing ARPA-format language model")
@@ -47,15 +51,15 @@ def enumerate_phrases(f_cache, coverage):
         yield ((i, entry['end']), entry['bitstring'], entry['phrase'])
 
 
-def precalcuate_future_cost(f):
+def precalcuate_future_cost(f, PTweights):
   table = {}  # table[i,j] := [i,j)
   neginf = -float('inf')
   for l in xrange(1, len(f)+1):  # 1 .. len(f)
     for i in xrange(0, len(f)-l+1):  # 0 .. len(f)-l (s.t. i+j <= len(f))
       j = i + l  # 1 .. j-1 (f[i:j])
       if f[i:j] in tm:
-        maxph = max(tm[f[i:j]], key=lambda x: x.logprob)
-        table[i,j] = maxph.logprob
+        scores = [calculate_total_score(p.features, PTweights) for p in tm[f[i:j]]]
+        table[i,j] = max(scores)
       else:
         table[i,j] = neginf
       for k in xrange(1, l): # 1 .. l-1 (skipped when l=1)
@@ -84,44 +88,56 @@ def get_future_cost(bitList, futureCostTable):
   return cost
 
 
-def get_candidates(french, tm, lm, weights, stack_size=1, nbest=None, verbose=False):
+def calculate_total_score(features, weights):
+  return sum(p*q for p,q in zip(features, weights))
+
+
+def extract_english(h):
+  return "" if h.predecessor is None else \
+    "%s%s " % (extract_english(h.predecessor), h.phrase.english)
+
+
+def get_candidates(french, tm, lm, weights, stack_size=10, nbest=None, verbose=False):
+  sys.stderr.write("Decoding %s...\n" % (opts.input,))
   if nbest is None:
     nbest = stack_size
-  sys.stderr.write("Decoding %s...\n" % (opts.input,))
   for n, f in enumerate(french):
     if opts.verbose:
       print >> sys.stderr, "Input: " + f
     # Generate cache for phrase segmentations.
     f_cache = generate_phrase_cache(f)
     # Pre-calculate future cost table
-    future_cost_table = precalcuate_future_cost(f)
+    future_cost_table = precalcuate_future_cost(f, weights[:number_of_features_PT])
 
-    # logprob = log_lmprob + log_tmprob + distortion_penalty
+    # score = dot(features, weights)
+    # features = sums of each log feature
     # predecessor = previous hypothesis
     # lm_state = N-gram state (the last one or two words)
     # last_frange = (i, j) the range of last translated phrase in f
     # phrase = the last TM phrase object (correspondence to f[last_frange])
     # coverage = bit string representing the translation coverage on f
-    # future_cost
-    hypothesis = namedtuple("hypothesis", "logprob, lm_state, predecessor, last_frange, phrase, coverage, future_cost")
-    initial_hypothesis = hypothesis(0.0, lm.begin(), None, (0, 0), None, 0, 0)
+    # future_cost = a safe estimation to be added to total_score
+    hypothesis = namedtuple("hypothesis", "score, features, lm_state, predecessor, last_frange, phrase, coverage, future_cost")
+    initial_hypothesis = hypothesis(0.0, [0.0] * number_of_features, lm.begin(), None, (0, 0), None, 0, 0)
+
     # stacks[# of covered words in f] (from 0 to |f|)
     stacks = [{} for _ in xrange(len(f) + 1)]
     # stacks[size][(lm_state, last_frange, coverage)]:
     # recombination based on (lm_state, last_frange, coverage).
-    # For different hypotheses with the same tuple, keep the one with the higher logprob.
+    # For different hypotheses with the same tuple, keep the one with the higher score.
     # lm_state affects LM; last_frange affects distortion; coverage affects available choices.
     stacks[0][(lm.begin(), None, 0)] = initial_hypothesis
+
     for i, stack in enumerate(stacks[:-1]):
       if opts.verbose:
         print >> sys.stderr, "Stack[%d]:" % i
 
       # Top-k pruning
       s_hypotheses = sorted(
-        stack.values(), key=lambda h: h.logprob + h.future_cost, reverse=True)
+        stack.values(), key=lambda h: h.score + h.future_cost, reverse=True)
       for h in s_hypotheses[:opts.s]:
         if verbose:
-          print >> sys.stderr, h.logprob, h.lm_state, bin(h.coverage), unicode(' '.join(f[h.last_frange[0]:h.last_frange[1]]), 'utf8'), h.future_cost
+          print >> sys.stderr, h.score, h.lm_state, bin(h.coverage), unicode(' '.join(f[h.last_frange[0]:h.last_frange[1]]), 'utf8'), h.future_cost
 
         for (f_range, delta_coverage, tm_phrases) in enumerate_phrases(f_cache, h.coverage):
           # f_range = (i, j) of the enumerated next phrase to be translated
@@ -133,37 +149,38 @@ def get_candidates(french, tm, lm, weights, stack_size=1, nbest=None, verbose=Fa
 
           # TM might give us multiple candidates for a fphrase.
           for phrase in tm_phrases:
-            # log_tmprob and distortion
-            logprob = h.logprob + phrase.logprob + log(alpha)*sqrt(abs(distance))
+            # Features from phrase table
+            features =[h.features[fid]+phrase.features[fid] for fid in range(number_of_features_PT)]
             # log_lmprob (N-gram)
             lm_state = h.lm_state
+            loglm = 0.0
             for word in phrase.english.split():
               (lm_state, word_logprob) = lm.score(lm_state, word)
-              logprob += word_logprob
+              loglm += word_logprob
             # Don't forget the STOP N-gram if we just covered the whole sentence.
-            logprob += lm.end(lm_state) if length == len(f) else 0.0
+            loglm += lm.end(lm_state) if length == len(f) else 0.0
+            features.append(loglm)
+            # log distortion
+            features.append(log(alpha)*sqrt(abs(distance)))
 
-            # Future cost.
+            score = calculate_total_score(features, weights)
             future_list = get_future_list(coverage, len(f))
             future_cost = get_future_cost(future_list, future_cost_table)
 
             new_state = (lm_state, f_range, coverage)
-            new_hypothesis = hypothesis(logprob, lm_state, h, f_range, phrase, coverage, future_cost)
+            new_hypothesis = hypothesis(score, features, lm_state, h, f_range, phrase, coverage, future_cost)
+            # Recombination
             if new_state not in stacks[length] or \
-                logprob + future_cost > stacks[length][new_state].logprob + stacks[length][new_state].future_cost:  # recombination
+                score + future_cost > stacks[length][new_state].score + stacks[length][new_state].future_cost:
               stacks[length][new_state] = new_hypothesis
 
-    winners = sorted(stacks[len(f)].values(), key=lambda h: h.logprob, reverse=True)
-
-    def extract_english(h):
-      return "" if h.predecessor is None else "%s%s " % (extract_english(h.predecessor), h.phrase.english)
-
+    winners = sorted(stacks[len(f)].values(), key=lambda h: h.score, reverse=True)
     if nbest == 1:
       yield extract_english(winners[0])
     else:
       for s in winners[:nbest]:
-        yield "%d ||| %s ||| %f" % \
-          (n, extract_english(s), s.logprob)
+        yield ("%d ||| %s |||" + " %f" * number_of_features) % \
+          ((n, extract_english(s)) + tuple(s.features))
 
 
 if __name__ == "__main__":
@@ -180,8 +197,15 @@ if __name__ == "__main__":
     opts.input = "data/test/all.cn-en.cn"
     opts.lm = "data/lm/en.gigaword.3g.filtered.train_dev_test.arpa.gz"
     opts.tm = "data/large/phrase-table/test-filtered/rules_cnt.final.out"
+  if opts.weights is None:
+    weights = [1. / number_of_features] * number_of_features
+  else:
+    with open(opts.weights) as weights_file:
+      weights = [float(line.strip()) for line in weights_file]
+      # weights = map(lambda x: 1.0 if math.isnan(x) or x == float("-inf") or x == float("inf") or x == 0.0 else x, w)
+      assert len(weights) == number_of_features
 
-  tm = models.TM(opts.tm, opts.k)
+  tm = models.TM(opts.tm, opts.k, weights)
   lm = models.LM(opts.lm)
   french = [tuple(line.strip().split()) for line in open(opts.input).readlines()[:opts.num_sents]]
 
@@ -189,8 +213,8 @@ if __name__ == "__main__":
   # (i.e. only fallback to copying unknown words over as the last resort)
   for word in set(sum(french,())):
     if (word,) not in tm:
-      tm[(word,)] = [models.phrase(word, unknown_word_logprob)]
+      tm[(word,)] = [models.phrase(word, [unknown_word_logprob] * number_of_features_PT)]
 
-  candidates = get_candidates(french, tm, lm, 1, stack_size=opts.s, nbest=opts.nbest, verbose=opts.verbose)
+  candidates = get_candidates(french, tm, lm, weights, stack_size=opts.s, nbest=opts.nbest, verbose=opts.verbose)
   for i in candidates:
     print i
