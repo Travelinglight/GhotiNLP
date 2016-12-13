@@ -1,0 +1,7 @@
+cffi==1.9.0
+chardet==2.1.1
+future==0.16.0
+greenlet==0.4.10
+jieba==0.37
+mafan==0.3.1
+readline==6.2.4.1
