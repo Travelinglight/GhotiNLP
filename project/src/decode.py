@@ -3,13 +3,14 @@ import optparse
 import os
 import sys
 from collections import namedtuple
-from math import log, sqrt
+from math import log
 
 import models
 
 
 # Parameter constants
 alpha = 0.5  # reordering parameter
+max_distance = 10  # maximum distance of reordering
 unknown_word_logprob = -100.0  # the logprob of unknown single words
 # Features: 0 phi(f|e), 1 lex(f|e), 2 phi(e|f), 3 lex(e|f), 4 lm, 5 distortion
 number_of_features_PT = 4  # in phrase table
@@ -77,6 +78,8 @@ def get_future_list(bitstring, length):
     if pos > start:
       futureList.append((start, pos))
     start = pos + 1
+  if start != length:
+    futureList.append((start, length))
   return futureList
 
 
@@ -132,8 +135,8 @@ def get_candidates(inputfile, tm, lm, weights, stack_size=10, nbest=None, verbos
 
     # stacks[# of covered words in f] (from 0 to |f|)
     stacks = [{} for _ in xrange(len(f) + 1)]
-    # stacks[size][(lm_state, last_frange, coverage)]:
-    # recombination based on (lm_state, last_frange, coverage).
+    # stacks[size][(lm_state, last_frange[1], coverage)]:
+    # recombination based on (lm_state, last_frange[1], coverage).
     # For different hypotheses with the same tuple, keep the one with the higher score.
     # lm_state affects LM; last_frange affects distortion; coverage affects available choices.
     stacks[0][(lm.begin(), None, 0)] = initial_hypothesis
@@ -155,12 +158,16 @@ def get_candidates(inputfile, tm, lm, weights, stack_size=10, nbest=None, verbos
           # tm_phrases = TM entries corresponding to fphrase f[f_range]
           length = i + f_range[1] - f_range[0]
           coverage = h.coverage | delta_coverage
-          distance = f_range[0] - h.last_frange[1]
+          distance = abs(f_range[0] - h.last_frange[1])
+          if distance > 10:
+            continue
 
           # TM might give us multiple candidates for a fphrase.
           for phrase in tm_phrases:
+            features = h.features[:]  # copy!
             # Features from phrase table
-            features = [h.features[fid]+phrase.features[fid] for fid in range(number_of_features_PT)]
+            for fid in range(number_of_features_PT):
+              features[fid] += phrase.features[fid]
             # log_lmprob (N-gram)
             lm_state = h.lm_state
             loglm = 0.0
@@ -169,15 +176,15 @@ def get_candidates(inputfile, tm, lm, weights, stack_size=10, nbest=None, verbos
               loglm += word_logprob
             # Don't forget the STOP N-gram if we just covered the whole sentence.
             loglm += lm.end(lm_state) if length == len(f) else 0.0
-            features.append(loglm)
-            # log distortion
-            features.append(log(alpha)*sqrt(abs(distance)))
+            features[4] += loglm
+            # log distortion (distance ** alpha)
+            features[5] += log(alpha) * distance
 
             score = calculate_total_score(features, weights)
             future_list = get_future_list(coverage, len(f))
             future_cost = get_future_cost(future_list, future_cost_table)
 
-            new_state = (lm_state, f_range, coverage)
+            new_state = (lm_state, f_range[1], coverage)
             new_hypothesis = hypothesis(score, features, lm_state, h, f_range, phrase, coverage, future_cost)
             # Recombination
             if new_state not in stacks[length] or \
