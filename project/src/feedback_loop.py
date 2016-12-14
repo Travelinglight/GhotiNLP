@@ -33,8 +33,8 @@ for i in range(int(opts.loop)):
     results = rerank.rerank(weights, nbest_list)
     print >> sys.stderr, "BLEU SCORE: %f:" % scorereranker.score(results, opts.reference)
 
-tm = models.TM(opts.tmtest, opts.k, weights[0:-1])
-nbest_list = decode.get_candidates(opts.eval, tm, lm, weights)
-results = rerank.rerank(weights, nbest_list)
+tm = models.TM(opts.tmtest, opts.k, weights[:4])
+nbest_list = decode.get_candidates(opts.eval, tm, lm, weights, nbest=1)
+#results = rerank.rerank(weights, nbest_list)
 with open("output1", "w") as f:
     f.write("\n".join(results))
