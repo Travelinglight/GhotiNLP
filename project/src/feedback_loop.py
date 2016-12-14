@@ -27,17 +27,14 @@ lm = models.LM(opts.lm)
 weights = [1.0 / 6] * 6
 for i in range(int(opts.loop)):
     tm = models.TM(opts.tmdev, opts.k, weights[:4], simpmode=opts.simplify)
-    nbest_list = []
-    nbest_candidates = decode.get_candidates(opts.input, tm, lm, weights, stack_size=opts.s, verbose=opts.verbose, simpmode=opts.simplify)
-    for line in nbest_candidates:
-        nbest_list.append(line)
-    weights = trainreranker.train(nbest_list, opts.reference)
+    nbest_list = list(decode.get_candidates(opts.input, tm, lm, weights, stack_size=opts.s, verbose=opts.verbose, simpmode=opts.simplify))
+    weights = trainreranker.train(nbest_list, opts.reference, weights)
     print weights
     results = rerank.rerank(weights, nbest_list)
     print >> sys.stderr, "BLEU SCORE: %f:" % scorereranker.score(results, opts.reference)
 
-tm = models.TM(opts.tmtest, opts.k, weights[0:-1])
-nbest_list = decode.get_candidates(opts.eval, tm, lm, weights)
-results = rerank.rerank(weights, nbest_list)
+tm = models.TM(opts.tmtest, opts.k, weights[:4])
+nbest_list = decode.get_candidates(opts.eval, tm, lm, weights, nbest=1)
+#results = rerank.rerank(weights, nbest_list)
 with open("output1", "w") as f:
     f.write("\n".join(results))

@@ -8,11 +8,11 @@ from math import fabs
 import bleu
 
 
-def train(nbest_candidates, refdir, epochs=5, alpha=0.04, tau=10000, xi=1000, eta=0.1):
+def train(nbest_candidates, reference_file, init_weights=None, epochs=5, alpha=0.04, tau=10000, xi=1000, eta=0.1):
     # initialization
     print >> sys.stderr, "Initializing training data"
     candidate = namedtuple("candidate", "sentence, features, bleu, smoothed_bleu")
-    ref = [line.strip().split() for line in open(refdir)]
+    ref = [line.strip().split() for line in open(reference_file)]
     nbests = []
     for n, line in enumerate(nbest_candidates):
         (i, sentence, features) = line.strip().split("|||")
@@ -31,11 +31,13 @@ def train(nbest_candidates, refdir, epochs=5, alpha=0.04, tau=10000, xi=1000, et
 
         if n % 2000 == 0:
             sys.stderr.write(".")
-    print >> sys.stderr, "Retrieved %d candidates for %d sentences" % (n, len(nbests))
+    print >> sys.stderr, "\nRetrieved %d candidates for %d sentences" % (n, len(nbests))
 
     # set weights to default
-    w = np.array([1.0/len(nbests[0][0].features)] * len(nbests[0][0].features))
-    weights = np.zeros(len(nbests[0][0].features))
+    w = init_weights if init_weights is not None else \
+        np.array([1.0/len(nbests[0][0].features)] * len(nbests[0][0].features))
+    assert len(w) == len(nbests[0][0].features)
+    w_sum = np.zeros(len(nbests[0][0].features))
 
     # training
     random.seed()
@@ -63,8 +65,8 @@ def train(nbest_candidates, refdir, epochs=5, alpha=0.04, tau=10000, xi=1000, et
                     mistakes += 1
                     w += eta * (s1.features - s2.features)  # this is vector addition!
 
-        weights += w
+        w_sum += w
         print >> sys.stderr, "Number of mistakes: %d" % mistakes
 
-    w = weights / float(epochs)
+    w = w_sum / float(epochs)
     return w

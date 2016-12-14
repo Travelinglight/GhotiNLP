@@ -2,7 +2,6 @@
 import optparse
 import os
 import sys
-from mafan import simplify
 from collections import namedtuple
 from math import log
 
@@ -28,6 +27,8 @@ optparser.add_option("-v", "--verbose", dest="verbose", action="store_true", def
 hyperparam_opts = optparse.OptionGroup(optparser, "Hyperparameters")
 hyperparam_opts.add_option("-k", "--translations-per-phrase", dest="k", default=3, type="int", help="Limit on number of translations to consider per phrase (default=3)")
 hyperparam_opts.add_option("-s", "--stack-size", dest="s", default=100, type="int", help="Maximum stack size (default=100)")
+hyperparam_opts.add_option("--simplify", dest="simpmode", action="store_true", default=False, help="Turn on simplification on phrase table and input data")
+hyperparam_opts.add_option("--resegment-unknown", dest="reseg_unknown", action="store_true", default=False, help="Try to resegment unknown words into two known words")
 optparser.add_option_group(hyperparam_opts)
 
 
@@ -100,37 +101,38 @@ def extract_english(h):
     "%s%s " % (extract_english(h.predecessor), h.phrase.english)
 
 
-def get_candidates(inputfile, tm, lm, weights, stack_size=10, nbest=None, verbose=False, simpmode=True):
+def get_candidates(inputfile, tm, lm, weights,
+                   stack_size=10, nbest=None, simpmode=True, separate_unknown_words=False,
+                   verbose=False):
   if nbest is None:
     nbest = stack_size
 
   print >> sys.stderr, "Decoding: " + inputfile
   print >> sys.stderr, "Reading input..."
-  french = [list(line.strip().split()) for line in open(inputfile).readlines()]
+  french = [line.strip().split() for line in open(inputfile).readlines()]  # list of list
   if simpmode:
+    from mafan import simplify
     for li, line in enumerate(french):
       for wi, word in enumerate(line):
         french[li][wi] = simplify(word.decode('utf-8')).encode('utf-8')
 
   # tm should translate unknown words as-is with a small probability
   # (i.e. only fallback to copying unknown words over as the last resort)
-  for i in range(len(french)):
+  for i in xrange(len(french)):
     j = 0
     while j < len(french[i]):
       word = french[i][j]
       if (word,) not in tm:
-        flag = True 
-        if len(word) >= 2:
-          for seperate in range(1,len(word)):
-            if (word[:seperate],) in tm and (word[seperate:],) in tm: 
-              sentence = list(french[i])
-              sentence[j] = word[:seperate]
+        flag = True
+        if len(word) >= 2 and separate_unknown_words:
+          for separate in xrange(1, len(word)):
+            if (word[:separate],) in tm and (word[separate:],) in tm:
+              french[i][j] = word[:separate]
               j += 1
-              sentence.insert(j, word[seperate:])
-              french[i] = tuple(sentence)
+              french[i].insert(j, word[separate:])
               flag = False
               break
-        if flag:     
+        if flag:
           tm[(word,)] = [models.phrase(word, [unknown_word_logprob] * number_of_features_PT)]
       j += 1
 
@@ -244,9 +246,12 @@ if __name__ == "__main__":
       # weights = map(lambda x: 1.0 if math.isnan(x) or x == float("-inf") or x == float("inf") or x == 0.0 else x, w)
       assert len(weights) == number_of_features
 
-  tm = models.TM(opts.tm, opts.k, weights)
+  if opts.simpmode:
+    tm = models.TM(opts.tm, opts.k, weights, simpmode=True)
+  else:
+    tm = models.TM(opts.tm, opts.k, weights, simpmode=False)
   lm = models.LM(opts.lm)
 
-  candidates = get_candidates(opts.input, tm, lm, weights, stack_size=opts.s, nbest=opts.nbest, verbose=opts.verbose)
+  candidates = get_candidates(opts.input, tm, lm, weights, stack_size=opts.s, nbest=opts.nbest, simpmode=opts.simpmode, separate_unknown_words=opts.reseg_unknown, verbose=opts.verbose)
   for i in candidates:
     print i

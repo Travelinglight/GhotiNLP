@@ -3,7 +3,6 @@
 import sys
 import gzip
 import math
-from mafan import simplify
 from collections import namedtuple
 
 # A translation model is a dictionary where keys are tuples of French words
@@ -14,7 +13,7 @@ from collections import namedtuple
 #   phrase(english='what has been', features=[-0.301030009985, ...])]
 # k is a pruning parameter: only the top k translations are kept for each f.
 phrase = namedtuple("phrase", "english, features")
-def TM(filename, k, weights, simpmode=True):
+def TM(filename, k, weights, simpmode=False):
   sys.stderr.write("Reading translation model from %s...\n" % (filename,))
   tm = {}
   for line in open(filename).readlines():
@@ -27,6 +26,7 @@ def TM(filename, k, weights, simpmode=True):
     tm[f].sort(key=lambda x: sum(p*q for p,q in zip(x.features, weights)), reverse=True)
     del tm[f][k:]
     if simpmode:
+      from mafan import simplify
       sf = tuple(simplify(f[i].decode('utf-8')) for i in range(len(f)))
       if sf != tuple(f[i].decode('utf-8') for i in range(len(f))):
         if sf in tm:
