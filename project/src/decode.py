@@ -28,6 +28,8 @@ optparser.add_option("-v", "--verbose", dest="verbose", action="store_true", def
 hyperparam_opts = optparse.OptionGroup(optparser, "Hyperparameters")
 hyperparam_opts.add_option("-k", "--translations-per-phrase", dest="k", default=3, type="int", help="Limit on number of translations to consider per phrase (default=3)")
 hyperparam_opts.add_option("-s", "--stack-size", dest="s", default=100, type="int", help="Maximum stack size (default=100)")
+hyperparam_opts.add_option("--simplify", dest="simpmode", action="store_true", default=False, help="Turn on simplification on phrase table and input data")
+hyperparam_opts.add_option("--resegment-unknown", dest="reseg_unknown", action="store_true", default=False, help="Try to resegment unknown words into two known words")
 optparser.add_option_group(hyperparam_opts)
 
 
@@ -247,6 +249,6 @@ if __name__ == "__main__":
   tm = models.TM(opts.tm, opts.k, weights)
   lm = models.LM(opts.lm)
 
-  candidates = get_candidates(opts.input, tm, lm, weights, stack_size=opts.s, nbest=opts.nbest, verbose=opts.verbose)
+  candidates = get_candidates(opts.input, tm, lm, weights, stack_size=opts.s, nbest=opts.nbest, simpmode=opts.simpmode, separate_unknown_words=opts.reseg_unknown, verbose=opts.verbose)
   for i in candidates:
     print i
