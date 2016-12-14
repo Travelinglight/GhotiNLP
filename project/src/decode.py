@@ -16,7 +16,7 @@ unknown_word_logprob = -100.0  # the logprob of unknown single words
 # Features: 0 phi(f|e), 1 lex(f|e), 2 phi(e|f), 3 lex(e|f), 4 lm, 5 distortion
 number_of_features_PT = 4  # in phrase table
 number_of_features = number_of_features_PT + 2
-"""
+
 optparser = optparse.OptionParser()
 optparser.add_option("-d", "--dataset", dest="dataset", help="Data set to run on (override other paths): toy, dev, test")
 optparser.add_option("-w", "--weights", dest="weights", help="File containing weights for log-linear models")
@@ -25,12 +25,11 @@ optparser.add_option("-t", "--translation-model", dest="tm", default="data/large
 optparser.add_option("-l", "--language-model", dest="lm", default="data/lm/en.gigaword.3g.filtered.train_dev_test.arpa.gz", help="File containing ARPA-format language model")
 optparser.add_option("--nbest", dest="nbest", default=1, type="int", help="Number of best translation candidates to print; if larger than 1, will print indexes and scores as well (default=1)")
 optparser.add_option("-v", "--verbose", dest="verbose", action="store_true", default=False, help="Verbose mode (default=off)")
-optparser.add_option("-s", "--verbose", dest="verbose", action="store_true", default=False, help="Verbose mode (default=off)")
 hyperparam_opts = optparse.OptionGroup(optparser, "Hyperparameters")
 hyperparam_opts.add_option("-k", "--translations-per-phrase", dest="k", default=3, type="int", help="Limit on number of translations to consider per phrase (default=3)")
 hyperparam_opts.add_option("-s", "--stack-size", dest="s", default=100, type="int", help="Maximum stack size (default=100)")
 optparser.add_option_group(hyperparam_opts)
-"""
+
 
 def generate_phrase_cache(f, tm):
   cache = []
@@ -115,9 +114,25 @@ def get_candidates(inputfile, tm, lm, weights, stack_size=10, nbest=None, verbos
 
   # tm should translate unknown words as-is with a small probability
   # (i.e. only fallback to copying unknown words over as the last resort)
-  for word in set(sum(french,[])):
-    if (word,) not in tm:
-      tm[(word,)] = [models.phrase(word, [unknown_word_logprob] * number_of_features_PT)]
+  for i in range(len(french)):
+    j = 0
+    while j < len(french[i]):
+      word = french[i][j]
+      if (word,) not in tm:
+        flag = True 
+        if len(word) >= 2:
+          for seperate in range(1,len(word)):
+            if (word[:seperate],) in tm and (word[seperate:],) in tm: 
+              sentence = list(french[i])
+              sentence[j] = word[:seperate]
+              j += 1
+              sentence.insert(j, word[seperate:])
+              french[i] = tuple(sentence)
+              flag = False
+              break
+        if flag:     
+          tm[(word,)] = [models.phrase(word, [unknown_word_logprob] * number_of_features_PT)]
+      j += 1
 
   print >> sys.stderr, "Start decoding..."
   for n, f in enumerate(french):
