@@ -31,7 +31,6 @@ for i in range(int(opts.loop)):
     weights = trainreranker.train(nbest_list, opts.reference)
     print weights
     results = rerank.rerank(weights, nbest_list)
-    print results
     print >> sys.stderr, "BLEU SCORE: %f:" % scorereranker.score(results, opts.reference)
 
 tm = models.TM(opts.tmtest, opts.k, weights[0:-1])

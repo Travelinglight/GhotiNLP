@@ -165,7 +165,7 @@ def get_candidates(inputfile, tm, lm, weights, stack_size=10, nbest=None, verbos
           length = i + f_range[1] - f_range[0]
           coverage = h.coverage | delta_coverage
           distance = abs(f_range[0] - h.last_frange[1])
-          if distance > 10:
+          if distance > 10 and i < len(stacks) / 2:
             continue
 
           # TM might give us multiple candidates for a fphrase.
