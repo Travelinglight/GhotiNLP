@@ -28,7 +28,7 @@ weights = [1.0 / 6] * 6
 for i in range(int(opts.loop)):
     tm = models.TM(opts.tmdev, opts.k, weights[:4], simpmode=opts.simplify)
     nbest_list = list(decode.get_candidates(opts.input, tm, lm, weights, stack_size=opts.s, verbose=opts.verbose, simpmode=opts.simplify))
-    weights = trainreranker.train(nbest_list, opts.reference)
+    weights = trainreranker.train(nbest_list, opts.reference, weights)
     print weights
     results = rerank.rerank(weights, nbest_list)
     print >> sys.stderr, "BLEU SCORE: %f:" % scorereranker.score(results, opts.reference)
