@@ -2,6 +2,8 @@
 # Simple translation model and language model data structures
 import sys
 import gzip
+import math
+from mafan import simplify
 from collections import namedtuple
 
 # A translation model is a dictionary where keys are tuples of French words
@@ -12,16 +14,45 @@ from collections import namedtuple
 #   phrase(english='what has been', features=[-0.301030009985, ...])]
 # k is a pruning parameter: only the top k translations are kept for each f.
 phrase = namedtuple("phrase", "english, features")
-def TM(filename, k, weights):
+def TM(filename, k, weights, simpmode=True):
   sys.stderr.write("Reading translation model from %s...\n" % (filename,))
   tm = {}
   for line in open(filename).readlines():
     (f, e, features) = line.strip().split(" ||| ")
     tm.setdefault(tuple(f.split()), []).append(
       phrase(e, [float(i) for i in features.strip().split()]))
+
+  tmptm = {}
   for f in tm: # prune all but top k translations
     tm[f].sort(key=lambda x: sum(p*q for p,q in zip(x.features, weights)), reverse=True)
     del tm[f][k:]
+    if simpmode:
+      sf = tuple(simplify(f[i].decode('utf-8')) for i in range(len(f)))
+      if sf != tuple(f[i].decode('utf-8') for i in range(len(f))):
+        if sf in tm:
+          for p in tm[f]:
+            found = False
+            for pi, sp in enumerate(tm[sf]):
+              if sp.english == p.english:
+                found = True
+                tm[sf][pi].features[0] = (tm[sf][pi].features[0] + p.features[0]) / 2
+                tm[sf][pi].features[1] = math.log(math.exp(tm[sf][pi].features[1]) + math.exp(p.features[1]))
+                tm[sf][pi].features[2] = max([tm[sf][pi].features[2], p.features[2]])
+                tm[sf][pi].features[3] = max([tm[sf][pi].features[3], p.features[3]])
+            if not found:
+              tm[sf].append(phrase(p.english, [
+                p.features[0] / 2,
+                math.log(math.exp(p.features[1]) + 1),
+                p.features[2],
+                p.features[3]
+              ]))
+        else:
+          for p in tm[f]:
+            tmptm.setdefault(sf, []).append(p)
+
+  for f in tmptm:
+    tm[f] = tmptm[f]
+
   return tm
 
 # # A language model scores sequences of English words, and must account

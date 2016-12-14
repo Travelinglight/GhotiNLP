@@ -7,7 +7,7 @@ def rerank(w, nbestlist):
     nbests = []
     for line in nbestlist:
         (i, sentence, features) = line.strip().split("|||")
-        if len(nbests) <= int(i):
+        while len(nbests) <= int(i):
             nbests.append([])
         features = [float(h) for h in features.strip().split()]
         if w is None or len(w) != len(features):

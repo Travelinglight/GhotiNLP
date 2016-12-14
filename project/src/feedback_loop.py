@@ -18,18 +18,20 @@ optparser.add_option("-k", "--translations-per-phrase", dest="k", default=3, typ
 optparser.add_option("-s", "--stack-size", dest="s", default=100, type="int", help="Maximum stack size (default=1)")
 optparser.add_option("-v", "--verbose", dest="verbose", action="store_true", default=False,  help="Verbose mode (default=off)")
 optparser.add_option("-f", "--feedback-loop", dest="loop", default=10,  help="The number of times the weight vector loops between decoder and reranker")
+optparser.add_option("-c", "--simplify", dest="simplify", default=True,  help="Simplified mode (default=on)")
 
 opts = optparser.parse_args()[0]
 
 lm = models.LM(opts.lm)
 
 weights = [1.0 / 6] * 6
-for i in range(opts.loop):
-    tm = models.TM(opts.tmdev, opts.k, weights[:4])
-    nbest_list = decode.get_candidates(opts.input, tm, lm, weights, stack_size=opts.s, verbose=opts.verbose)
+for i in range(int(opts.loop)):
+    tm = models.TM(opts.tmdev, opts.k, weights[:4], simpmode=opts.simplify)
+    nbest_list = decode.get_candidates(opts.input, tm, lm, weights, stack_size=opts.s, verbose=opts.verbose, simpmode=opts.simplify)
     weights = trainreranker.train(nbest_list, opts.reference)
     print weights
     results = rerank.rerank(weights, nbest_list)
+    print results
     print >> sys.stderr, "BLEU SCORE: %f:" % scorereranker.score(results, opts.reference)
 
 tm = models.TM(opts.tmtest, opts.k, weights[0:-1])

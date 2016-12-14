@@ -2,6 +2,7 @@
 import optparse
 import os
 import sys
+from mafan import simplify
 from collections import namedtuple
 from math import log
 
@@ -15,7 +16,7 @@ unknown_word_logprob = -100.0  # the logprob of unknown single words
 # Features: 0 phi(f|e), 1 lex(f|e), 2 phi(e|f), 3 lex(e|f), 4 lm, 5 distortion
 number_of_features_PT = 4  # in phrase table
 number_of_features = number_of_features_PT + 2
-
+"""
 optparser = optparse.OptionParser()
 optparser.add_option("-d", "--dataset", dest="dataset", help="Data set to run on (override other paths): toy, dev, test")
 optparser.add_option("-w", "--weights", dest="weights", help="File containing weights for log-linear models")
@@ -24,11 +25,12 @@ optparser.add_option("-t", "--translation-model", dest="tm", default="data/large
 optparser.add_option("-l", "--language-model", dest="lm", default="data/lm/en.gigaword.3g.filtered.train_dev_test.arpa.gz", help="File containing ARPA-format language model")
 optparser.add_option("--nbest", dest="nbest", default=1, type="int", help="Number of best translation candidates to print; if larger than 1, will print indexes and scores as well (default=1)")
 optparser.add_option("-v", "--verbose", dest="verbose", action="store_true", default=False, help="Verbose mode (default=off)")
+optparser.add_option("-s", "--verbose", dest="verbose", action="store_true", default=False, help="Verbose mode (default=off)")
 hyperparam_opts = optparse.OptionGroup(optparser, "Hyperparameters")
 hyperparam_opts.add_option("-k", "--translations-per-phrase", dest="k", default=3, type="int", help="Limit on number of translations to consider per phrase (default=3)")
 hyperparam_opts.add_option("-s", "--stack-size", dest="s", default=100, type="int", help="Maximum stack size (default=100)")
 optparser.add_option_group(hyperparam_opts)
-
+"""
 
 def generate_phrase_cache(f, tm):
   cache = []
@@ -37,8 +39,8 @@ def generate_phrase_cache(f, tm):
     bitstring = 0
     for j in xrange(i+1, len(f)+1):
       bitstring += 1 << (len(f) - j)
-      if f[i:j] in tm:
-        entries.append({'end': j, 'bitstring': bitstring, 'phrase': tm[f[i:j]]})
+      if tuple(f[i:j]) in tm:
+        entries.append({'end': j, 'bitstring': bitstring, 'phrase': tm[tuple(f[i:j])]})
     cache.append(entries)
   return cache
 
@@ -57,8 +59,8 @@ def precalcuate_future_cost(f, tm, PTweights):
   for l in xrange(1, len(f)+1):  # 1 .. len(f)
     for i in xrange(0, len(f)-l+1):  # 0 .. len(f)-l (s.t. i+j <= len(f))
       j = i + l  # 1 .. j-1 (f[i:j])
-      if f[i:j] in tm:
-        scores = [calculate_total_score(p.features, PTweights) for p in tm[f[i:j]]]
+      if tuple(f[i:j]) in tm:
+        scores = [calculate_total_score(p.features, PTweights) for p in tm[tuple(f[i:j])]]
         table[i,j] = max(scores)
       else:
         table[i,j] = neginf
@@ -99,17 +101,21 @@ def extract_english(h):
     "%s%s " % (extract_english(h.predecessor), h.phrase.english)
 
 
-def get_candidates(inputfile, tm, lm, weights, stack_size=10, nbest=None, verbose=False):
+def get_candidates(inputfile, tm, lm, weights, stack_size=10, nbest=None, verbose=False, simpmode=True):
   if nbest is None:
     nbest = stack_size
 
   print >> sys.stderr, "Decoding: " + inputfile
   print >> sys.stderr, "Reading input..."
-  french = [tuple(line.strip().split()) for line in open(inputfile).readlines()]
+  french = [list(line.strip().split()) for line in open(inputfile).readlines()]
+  if simpmode:
+    for li, line in enumerate(french):
+      for wi, word in enumerate(line):
+        french[li][wi] = simplify(word.decode('utf-8')).encode('utf-8')
 
   # tm should translate unknown words as-is with a small probability
   # (i.e. only fallback to copying unknown words over as the last resort)
-  for word in set(sum(french,())):
+  for word in set(sum(french,[])):
     if (word,) not in tm:
       tm[(word,)] = [models.phrase(word, [unknown_word_logprob] * number_of_features_PT)]
 
