@@ -2,7 +2,6 @@
 import optparse
 import os
 import sys
-from mafan import simplify
 from collections import namedtuple
 from math import log
 
@@ -112,6 +111,7 @@ def get_candidates(inputfile, tm, lm, weights,
   print >> sys.stderr, "Reading input..."
   french = [line.strip().split() for line in open(inputfile).readlines()]  # list of list
   if simpmode:
+    from mafan import simplify
     for li, line in enumerate(french):
       for wi, word in enumerate(line):
         french[li][wi] = simplify(word.decode('utf-8')).encode('utf-8')
@@ -246,7 +246,10 @@ if __name__ == "__main__":
       # weights = map(lambda x: 1.0 if math.isnan(x) or x == float("-inf") or x == float("inf") or x == 0.0 else x, w)
       assert len(weights) == number_of_features
 
-  tm = models.TM(opts.tm, opts.k, weights)
+  if opts.simpmode:
+    tm = models.TM(opts.tm, opts.k, weights, simpmode=True)
+  else:
+    tm = models.TM(opts.tm, opts.k, weights, simpmode=False)
   lm = models.LM(opts.lm)
 
   candidates = get_candidates(opts.input, tm, lm, weights, stack_size=opts.s, nbest=opts.nbest, simpmode=opts.simpmode, separate_unknown_words=opts.reseg_unknown, verbose=opts.verbose)
