@@ -100,13 +100,15 @@ def extract_english(h):
     "%s%s " % (extract_english(h.predecessor), h.phrase.english)
 
 
-def get_candidates(inputfile, tm, lm, weights, stack_size=10, nbest=None, verbose=False, simpmode=True):
+def get_candidates(inputfile, tm, lm, weights,
+                   stack_size=10, nbest=None, simpmode=True, separate_unknown_words=False,
+                   verbose=False):
   if nbest is None:
     nbest = stack_size
 
   print >> sys.stderr, "Decoding: " + inputfile
   print >> sys.stderr, "Reading input..."
-  french = [list(line.strip().split()) for line in open(inputfile).readlines()]
+  french = [line.strip().split() for line in open(inputfile).readlines()]  # list of list
   if simpmode:
     for li, line in enumerate(french):
       for wi, word in enumerate(line):
@@ -114,23 +116,21 @@ def get_candidates(inputfile, tm, lm, weights, stack_size=10, nbest=None, verbos
 
   # tm should translate unknown words as-is with a small probability
   # (i.e. only fallback to copying unknown words over as the last resort)
-  for i in range(len(french)):
+  for i in xrange(len(french)):
     j = 0
     while j < len(french[i]):
       word = french[i][j]
       if (word,) not in tm:
-        flag = True 
-        if len(word) >= 2:
-          for seperate in range(1,len(word)):
-            if (word[:seperate],) in tm and (word[seperate:],) in tm: 
-              sentence = list(french[i])
-              sentence[j] = word[:seperate]
+        flag = True
+        if len(word) >= 2 and separate_unknown_words:
+          for separate in xrange(1, len(word)):
+            if (word[:separate],) in tm and (word[separate:],) in tm:
+              french[i][j] = word[:separate]
               j += 1
-              sentence.insert(j, word[seperate:])
-              french[i] = tuple(sentence)
+              french[i].insert(j, word[separate:])
               flag = False
               break
-        if flag:     
+        if flag:
           tm[(word,)] = [models.phrase(word, [unknown_word_logprob] * number_of_features_PT)]
       j += 1
 
