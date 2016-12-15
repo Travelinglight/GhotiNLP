@@ -39,7 +39,7 @@ for i in range(opts.loop):
 
 # Testing
 tm = models.TM(opts.tmtest, opts.k, weights[:4], simpmode=opts.simplify)
-nbest_list = list(decode.get_candidates(opts.eval, tm, lm, weights, nbest=1, stack_size=opts.stack_size, verbose=opts.verbose, simpmode=opts.simplify, separate_unknown_words=opts.reseg_unknown))
+nbest_list = list(decode.get_candidates(opts.eval, tm, lm, weights, nbest=1, stack_size=opts.s, verbose=opts.verbose, simpmode=opts.simplify, separate_unknown_words=opts.reseg_unknown))
 print >> sys.stderr, "TEST BLEU SCORE: %f:" % scorereranker.score(nbest_list, opts.referencetest.split())
 with open("output1", "w") as f:
     f.write("\n".join(nbest_list))
