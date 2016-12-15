@@ -14,4 +14,4 @@ def score(predicted, references):
 
         results.append(bleu.bleu(stats))
 
-    return max(scores)
+    return max(results)

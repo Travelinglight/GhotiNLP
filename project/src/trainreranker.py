@@ -8,8 +8,7 @@ from math import fabs
 import bleu
 
 
-# def train(nbest_candidates, reference_file, init_weights=None, epochs=5, alpha=0.04, tau=10000, xi=1000, eta=0.1):
-def train(nbest_candidates, reference_files, init_weights=None, epochs=5, alpha=0.04, tau=100, xi=20, eta=0.001):
+def train(nbest_candidates, reference_files, init_weights=None, epochs=5, alpha=0.04, tau=100, xi=20, eta=0.0001):
 
     # initialization
     print >> sys.stderr, "Initializing training data"
