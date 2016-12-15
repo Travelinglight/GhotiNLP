@@ -17,7 +17,7 @@ optparser.add_option("-l", "--language-model", dest="lm", default="data/lm/en.gi
 optparser.add_option("-k", "--translations-per-phrase", dest="k", default=3, type="int", help="Limit on number of translations to consider per phrase (default=1)")
 optparser.add_option("-s", "--stack-size", dest="s", default=10, type="int", help="Maximum stack size (default=10)")
 optparser.add_option("-f", "--feedback-loop", dest="loop", default=5, type="int", help="The number of times the weight vector loops between decoder and reranker")
-optparser.add_option("--simplify", dest="simplify", action="store_true", default=True, help="Simplified mode (default=on)")
+optparser.add_option("--simplify", dest="simplify", action="store_true", default=False, help="Simplified mode (default=off)")
 optparser.add_option("--resegment-unknown", dest="reseg_unknown", action="store_true", default=False, help="Try to resegment unknown words into two known words (default=off)")
 optparser.add_option("-v", "--verbose", dest="verbose", action="store_true", default=False, help="Verbose mode (default=off)")
 
