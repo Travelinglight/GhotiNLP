@@ -35,7 +35,7 @@ for i in range(opts.loop):
     print weights
     results = rerank.rerank(weights, nbest_list)
     print >> sys.stderr, "TRAINING LOOP %d BLEU SCORE: %f:" % \
-        (i, scorereranker.score(results, opts.reference))
+        (i, scorereranker.score(results, opts.reference.split()))
 
 # Testing
 tm = models.TM(opts.tmtest, opts.k, weights[:4], simpmode=opts.simplify)
