@@ -9,12 +9,14 @@ import bleu
 
 
 # def train(nbest_candidates, reference_file, init_weights=None, epochs=5, alpha=0.04, tau=10000, xi=1000, eta=0.1):
-def train(nbest_candidates, reference_file, init_weights=None, epochs=5, alpha=0.04, tau=100, xi=20, eta=0.001):
+def train(nbest_candidates, reference_files, init_weights=None, epochs=5, alpha=0.04, tau=100, xi=20, eta=0.001):
 
     # initialization
     print >> sys.stderr, "Initializing training data"
     candidate = namedtuple("candidate", "sentence, features, bleu, smoothed_bleu")
-    ref = [line.strip().split() for line in open(reference_file)]
+    refs = []
+    for reference_file in reference_files:
+        refs.append([line.strip().split() for line in open(reference_file)])
     nbests = []
     for n, line in enumerate(nbest_candidates):
         (i, sentence, features) = line.strip().split("|||")
@@ -23,13 +25,16 @@ def train(nbest_candidates, reference_file, init_weights=None, epochs=5, alpha=0
         features = np.array([float(h) for h in features.strip().split()])
 
         # calculate bleu score and smoothed bleu score
-        stats = tuple(bleu.bleu_stats(sentence.split(), ref[i]))
-        bleu_score = bleu.bleu(stats)
-        smoothed_bleu_score = bleu.smoothed_bleu(stats)
+        max_bleu_score = -float('inf')
+        for ref in refs:
+            stats = tuple(bleu.bleu_stats(sentence.split(), ref[i]))
+            bleu_score = bleu.bleu(stats)
+            smoothed_bleu_score = bleu.smoothed_bleu(stats)
+            max_bleu_score = max(max_bleu_score, smoothed_bleu_score)
 
         while len(nbests) <= i:
             nbests.append([])
-        nbests[i].append(candidate(sentence, features, bleu_score, smoothed_bleu_score))
+        nbests[i].append(candidate(sentence, features, bleu_score, max_bleu_score))
 
         if n % 2000 == 0:
             sys.stderr.write(".")
