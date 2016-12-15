@@ -27,7 +27,7 @@ lm = models.LM(opts.lm)
 
 # Training
 weights = [1.0 / 7] * 7
-for i in range(loop):
+for i in range(opts.loop):
     tm = models.TM(opts.tmdev, opts.k, weights[:4], simpmode=opts.simplify)
     nbest_list = list(decode.get_candidates(opts.input, tm, lm, weights, stack_size=opts.s, verbose=opts.verbose, simpmode=opts.simplify, separate_unknown_words=opts.reseg_unknown))
     weights = trainreranker.train(nbest_list, opts.reference, weights)
