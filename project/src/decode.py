@@ -12,9 +12,9 @@ import models
 alpha = 0.5  # reordering parameter
 max_distance = 10  # maximum distance of reordering
 unknown_word_logprob = -100.0  # the logprob of unknown single words
-# Features: 0 phi(f|e), 1 lex(f|e), 2 phi(e|f), 3 lex(e|f), 4 lm, 5 distortion
+# Features: 0 phi(f|e), 1 lex(f|e), 2 phi(e|f), 3 lex(e|f), 4 lm, 5 distortion, 6 length
 number_of_features_PT = 4  # in phrase table
-number_of_features = number_of_features_PT + 2
+number_of_features = number_of_features_PT + 3
 
 optparser = optparse.OptionParser()
 optparser.add_option("-d", "--dataset", dest="dataset", help="Data set to run on (override other paths): toy, dev, test")
@@ -182,7 +182,7 @@ def get_candidates(inputfile, tm, lm, weights,
           length = i + f_range[1] - f_range[0]
           coverage = h.coverage | delta_coverage
           distance = abs(f_range[0] - h.last_frange[1])
-          if distance > 10 and i < len(stacks) / 2:
+          if distance > max_distance and i < len(stacks) / 3:
             continue
 
           # TM might give us multiple candidates for a fphrase.
@@ -202,6 +202,8 @@ def get_candidates(inputfile, tm, lm, weights,
             features[4] += loglm
             # log distortion (distance ** alpha)
             features[5] += log(alpha) * distance
+            # length of the translation (-length)
+            features[6] += -len(phrase.english.split())
 
             score = calculate_total_score(features, weights)
             future_list = get_future_list(coverage, len(f))
