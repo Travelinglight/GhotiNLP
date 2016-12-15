@@ -10,7 +10,7 @@ import models
 
 # Parameter constants
 alpha = 0.5  # reordering parameter
-max_distance = 10  # maximum distance of reordering
+max_distance = 5  # maximum distance of reordering
 unknown_word_logprob = -100.0  # the logprob of unknown single words
 # Features: 0 phi(f|e), 1 lex(f|e), 2 phi(e|f), 3 lex(e|f), 4 lm, 5 distortion, 6 length
 number_of_features_PT = 4  # in phrase table
@@ -182,7 +182,7 @@ def get_candidates(inputfile, tm, lm, weights,
           length = i + f_range[1] - f_range[0]
           coverage = h.coverage | delta_coverage
           distance = abs(f_range[0] - h.last_frange[1])
-          if distance > max_distance and i < len(stacks) / 3:
+          if distance > max_distance and i < len(stacks) / 2:
             continue
 
           # TM might give us multiple candidates for a fphrase.
