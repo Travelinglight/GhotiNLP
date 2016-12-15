@@ -3,7 +3,7 @@ import bleu
 
 
 def score(predicted, references):
-    scores = []
+    results = []
     for reference in references:
         ref = [line.strip().split() for line in open(reference)]
         system = [line.strip().split() for line in predicted]
@@ -12,6 +12,6 @@ def score(predicted, references):
         for (r,s) in zip(ref, system):
           stats = [sum(scores) for scores in zip(stats, bleu.bleu_stats(s,r))]
 
-        scores += [bleu.bleu(stats)]
+        results.append(bleu.bleu(stats))
 
     return max(scores)
